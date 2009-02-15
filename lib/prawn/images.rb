@@ -20,7 +20,7 @@ module Prawn
     # Options:
     # <tt>:at</tt>:: an array [x,y] with the location of the top left corner of the image.
     # <tt>:position</tt>::  One of (:left, :center, :right) or an x-offset
-    # <tt>:vposition</tt>::  One of (:top, :center, :center) or an y-offset    
+    # <tt>:vposition</tt>::  One of (:top, :center, :bottom) or an y-offset
     # <tt>:height</tt>:: the height of the image [actual height of the image]
     # <tt>:width</tt>:: the width of the image [actual width of the image]
     # <tt>:scale</tt>:: scale the dimensions of the image proportionally
@@ -93,7 +93,35 @@ module Prawn
       w,h = calc_image_dimensions(info, options)
 
       if options[:at]     
-        x,y = translate(options[:at]) 
+
+        if options[:position] && options[:fit]
+          new_x = case options[:position]
+                     when :left
+                       options[:at][0]
+                     when :center
+                        options[:at][0] + (options[:fit][0] - w) / 2.0
+                     when :right
+                       options[:at][0] + options[:fit][0] - w
+                     else
+                       options[:at][0]
+                     end
+
+          new_y = case options[:vposition]
+                     when :bottom
+                       options[:at][1]
+                     when :center
+                        options[:at][1] + (options[:fit][1] - h) / 2.0
+                     when :top
+                       options[:at][1] + options[:fit][1] - h
+                     else
+                       options[:at][1]
+                     end
+
+          x,y = translate([new_x, new_y])
+          
+        else
+          x,y = translate(options[:at]) 
+        end
       else                  
         x,y = image_position(w,h,options) 
         move_text_position h   
