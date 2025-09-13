@@ -101,9 +101,11 @@ module Prawn
             accumulated_width += fragment_this_line.width
           end
 
-          @printed_lines << printed_fragments.map { |s|
-            s.dup.force_encoding(::Encoding::UTF_8)
-          }.join
+          out = +''
+          printed_fragments.each do |s|
+            out << s.dup.force_encoding(::Encoding::UTF_8)
+          end
+          @printed_lines << out
         end
 
         def word_spacing_for_this_line

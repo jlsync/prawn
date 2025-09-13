@@ -82,13 +82,16 @@ module Prawn
             raise NotFinalized.new(method: 'line')
           end
 
-          @fragments.map { |fragment|
-            begin
+          out = +''
+          @fragments.each do |fragment|
+            piece = begin
               fragment.text.dup.encode(::Encoding::UTF_8)
             rescue ::Encoding::InvalidByteSequenceError, ::Encoding::UndefinedConversionError
               fragment.text.dup.force_encoding(::Encoding::UTF_8)
             end
-          }.join
+            out << piece
+          end
+          out
         end
 
         # Finish laying out current line.
