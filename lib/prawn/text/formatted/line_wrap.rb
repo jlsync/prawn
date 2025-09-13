@@ -104,7 +104,7 @@ module Prawn
           else
             tokenize(fragment).each do |segment|
               segment_width =
-                if segment == zero_width_space(segment.encoding)
+                if segment == zero_width_space_cached(segment.encoding)
                   0
                 else
                   @document.width_of(segment, kerning: @kerning)
@@ -114,8 +114,7 @@ module Prawn
                 @accumulated_width += segment_width
                 shy = soft_hyphen(segment.encoding)
                 if segment[-1] == shy
-                  sh_width = @document.width_of(shy, kerning: @kerning)
-                  @accumulated_width -= sh_width
+                  @accumulated_width -= soft_hyphen_width_cached(shy)
                 end
                 @fragment_output << segment
               else
@@ -208,6 +207,12 @@ module Prawn
           nil
         end
 
+        def zero_width_space_cached(encoding)
+          @zws_cache ||= {}
+          return @zws_cache[encoding] if @zws_cache.key?(encoding)
+          @zws_cache[encoding] = zero_width_space(encoding)
+        end
+
         def whitespace(encoding = ::Encoding::UTF_8)
           "\s\t#{zero_width_space(encoding)}".encode(encoding)
         end
@@ -217,6 +222,19 @@ module Prawn
         rescue ::Encoding::InvalidByteSequenceError,
                ::Encoding::UndefinedConversionError
           nil
+        end
+
+        def soft_hyphen_width_cached(shy_char)
+          @soft_hyphen_width_cache ||= {}
+          # Cache by current font identity, size and kerning since width depends on them
+          font_id = @document.font.object_id
+          key = [font_id, @document.font_size, @kerning]
+          if (w = @soft_hyphen_width_cache[key])
+            return w
+          end
+          w = @document.width_of(shy_char, kerning: @kerning)
+          @soft_hyphen_width_cache[key] = w
+          w
         end
 
         def line_empty?
@@ -262,7 +280,7 @@ module Prawn
           remaining_text =
             fragment.slice(@fragment_output.length..fragment.length)
           if line_finished? && line_empty? && @fragment_output.empty? &&
-              !fragment.strip.empty?
+              fragment.match?(/\S/)
             raise Prawn::Errors::CannotFit
           end
 

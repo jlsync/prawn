@@ -251,10 +251,10 @@ module Prawn
             data[:glyph_widths][name] = Integer(line[/\bWX\s+(\d+)\s*;/, 1], 10)
             data[:bounding_boxes][name] = line[/\bB\s+([^;]+);/, 1].to_s.rstrip
           when %w[FontMetrics KernData KernPairs]
-            next unless line =~ /^KPX\s+(\.?\w+)\s+(\.?\w+)\s+(-?\d+)/
+            m = /^KPX\s+(\.?\w+)\s+(\.?\w+)\s+(-?\d+)/.match(line)
+            next unless m
 
-            data[:kern_pairs][[Regexp.last_match(1), Regexp.last_match(2)]] =
-              Integer(Regexp.last_match(3), 10)
+            data[:kern_pairs][[m[1], m[2]]] = Integer(m[3], 10)
           when %w[FontMetrics KernData TrackKern],
             %w[FontMetrics Composites]
             next
@@ -281,9 +281,10 @@ module Prawn
       end
 
       def parse_generic_afm_attribute(line, hash)
-        line =~ /(^\w+)\s+(.*)/
-        key = Regexp.last_match(1).to_s.downcase
-        value = Regexp.last_match(2)
+        m = /(^\w+)\s+(.*)/.match(line)
+        return unless m
+        key = m[1].to_s.downcase
+        value = m[2]
 
         hash[:attributes][key] =
           if hash[:attributes][key]
