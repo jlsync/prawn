@@ -73,11 +73,11 @@ module Prawn
           }
           array
             .map { |hash|
-              prefix = ''
-              suffix = ''
+              prefix = +''
+              suffix = +''
               hash[:styles]&.each do |style|
-                prefix += prefixes[style]
-                suffix = suffixes[style] + suffix
+                prefix << prefixes[style]
+                suffix.prepend(suffixes[style])
               end
 
               font = hash[:font] ? " name='#{hash[:font]}'" : nil
@@ -87,19 +87,19 @@ module Prawn
                   " character_spacing='#{hash[:character_spacing]}'"
                 end
               if font || size || character_spacing
-                prefix += "<font#{font}#{size}#{character_spacing}>"
+                prefix << "<font#{font}#{size}#{character_spacing}>"
                 suffix = '</font>'
               end
 
               link = hash[:link] ? " href='#{hash[:link]}'" : nil
               anchor = hash[:anchor] ? " anchor='#{hash[:anchor]}'" : nil
               if link || anchor
-                prefix += "<link#{link}#{anchor}>"
+                prefix << "<link#{link}#{anchor}>"
                 suffix = '</link>'
               end
 
               if hash[:color]
-                prefix +=
+                prefix <<
                   if hash[:color].is_a?(Array)
                     "<color c='#{hash[:color][0]}' " \
                       "m='#{hash[:color][1]}' " \
@@ -112,7 +112,11 @@ module Prawn
               end
 
               string = escape(hash[:text])
-              prefix + string + suffix
+              # Build in-place to reduce intermediate allocations
+              out = +prefix
+              out << string
+              out << suffix
+              out
             }
             .join
         end
