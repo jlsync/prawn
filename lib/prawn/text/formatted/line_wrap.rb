@@ -117,7 +117,7 @@ module Prawn
                   sh_width = @document.width_of(shy, kerning: @kerning)
                   @accumulated_width -= sh_width
                 end
-                @fragment_output += segment
+                @fragment_output << segment
               else
                 if @accumulated_width.zero? && @line_contains_more_than_one_word
                   @line_contains_more_than_one_word = false
@@ -136,25 +136,29 @@ module Prawn
         # The pattern used to determine chunks of text to place on a given line
         #
         def scan_pattern(encoding = ::Encoding::UTF_8)
-          ebc = break_chars(encoding)
-          eshy = soft_hyphen(encoding)
-          ehy = hyphen(encoding)
-          ews = whitespace(encoding)
+          # Cache per-encoding to avoid rebuilding identical regexes repeatedly
+          @scan_pattern_cache ||= {}
+          @scan_pattern_cache[encoding] ||= begin
+            ebc = break_chars(encoding)
+            eshy = soft_hyphen(encoding)
+            ehy = hyphen(encoding)
+            ews = whitespace(encoding)
 
-          patterns = [
-            "[^#{ebc}]+#{eshy}",
-            "[^#{ebc}]+#{ehy}+",
-            "[^#{ebc}]+",
-            "[#{ews}]+",
-            "#{ehy}+[^#{ebc}]*",
-            eshy.to_s,
-          ]
+            patterns = [
+              "[^#{ebc}]+#{eshy}",
+              "[^#{ebc}]+#{ehy}+",
+              "[^#{ebc}]+",
+              "[#{ews}]+",
+              "#{ehy}+[^#{ebc}]*",
+              eshy.to_s,
+            ]
 
-          pattern = patterns
-            .map { |p| p.encode(encoding) }
-            .join('|')
+            pattern = patterns
+              .map { |p| p.encode(encoding) }
+              .join('|')
 
-          Regexp.new(pattern)
+            Regexp.new(pattern)
+          end
         end
 
         # The pattern used to determine whether any word breaks exist on a
@@ -162,19 +166,23 @@ module Prawn
         # word breaking is needed
         #
         def word_division_scan_pattern(encoding = ::Encoding::UTF_8)
-          common_whitespaces =
-            ["\t", "\n", "\v", "\r", ' '].map { |c|
-              c.encode(encoding)
-            }
+          # Cache per-encoding to avoid rebuilding identical regexes repeatedly
+          @word_division_scan_cache ||= {}
+          @word_division_scan_cache[encoding] ||= begin
+            common_whitespaces =
+              ["\t", "\n", "\v", "\r", ' '].map { |c|
+                c.encode(encoding)
+              }
 
-          Regexp.union(
-            common_whitespaces +
-            [
-              zero_width_space(encoding),
-              soft_hyphen(encoding),
-              hyphen(encoding),
-            ].compact,
-          )
+            Regexp.union(
+              common_whitespaces +
+              [
+                zero_width_space(encoding),
+                soft_hyphen(encoding),
+                hyphen(encoding),
+              ].compact,
+            )
+          end
         end
 
         def soft_hyphen(encoding = ::Encoding::UTF_8)
@@ -185,7 +193,8 @@ module Prawn
         end
 
         def break_chars(encoding = ::Encoding::UTF_8)
-          [
+          @break_chars_cache ||= {}
+          @break_chars_cache[encoding] ||= [
             whitespace(encoding),
             soft_hyphen(encoding),
             hyphen(encoding),
@@ -277,9 +286,10 @@ module Prawn
         def remember_this_fragment_for_backward_looking_ops
           @previous_fragment = @fragment_output.dup
           pf = @previous_fragment
+          enc = pf.encoding
           @previous_fragment_ended_with_breakable =
-            pf =~ /[#{break_chars(pf.encoding)}]$/
-          last_word = pf.slice(/[^#{break_chars(pf.encoding)}]*$/)
+            breakable_end_regex(enc).match?(pf)
+          last_word = pf.slice(last_word_regex(enc))
           last_word_length = last_word.nil? ? 0 : last_word.length
           @previous_fragment_output_without_last_word =
             pf.slice(0, pf.length - last_word_length)
@@ -290,7 +300,22 @@ module Prawn
         end
 
         def fragment_begins_with_breakable?(fragment)
-          fragment =~ /^[#{break_chars(fragment.encoding)}]/
+          breakable_start_regex(fragment.encoding).match?(fragment)
+        end
+
+        def breakable_start_regex(encoding)
+          @breakable_start_regex_cache ||= {}
+          @breakable_start_regex_cache[encoding] ||= Regexp.new("^[#{break_chars(encoding)}]")
+        end
+
+        def breakable_end_regex(encoding)
+          @breakable_end_regex_cache ||= {}
+          @breakable_end_regex_cache[encoding] ||= Regexp.new("[#{break_chars(encoding)}]$")
+        end
+
+        def last_word_regex(encoding)
+          @last_word_regex_cache ||= {}
+          @last_word_regex_cache[encoding] ||= Regexp.new("[^#{break_chars(encoding)}]*$")
         end
 
         def line_finished?
