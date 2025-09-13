@@ -248,7 +248,7 @@ module PDF
               'A PDF Dictionary must be keyed by names'
           end
           "#{pdf_object(k.to_sym, in_content_stream)} #{encrypted_pdf_object(v, key, id, gen, in_content_stream)}\n"
-        }.join('')
+        }.join
         "<< #{hash_content}>>"
       when NameTree::Value
         "#{pdf_object(obj.name)} #{encrypted_pdf_object(obj.value, key, id, gen, in_content_stream)}"

@@ -41,6 +41,9 @@ module Prawn
         # @private
         UNESCAPE_CHARS = ESCAPE_CHARS.invert.freeze
 
+        # Precompiled scan pattern for paragraph splitting
+        SCAN_PATTERN = /[^\n]+|\n/
+
         # Parse formatted string.
         #
         # @param string [String]
@@ -130,9 +133,8 @@ module Prawn
           paragraphs = []
           paragraph = []
           previous_string = "\n"
-          scan_pattern = /[^\n]+|\n/
           array.each do |hash|
-            hash[:text].scan(scan_pattern).each do |string|
+            hash[:text].scan(SCAN_PATTERN).each do |string|
               if string == "\n"
                 if previous_string == "\n"
                   paragraph << hash.dup.merge(text: "\n")

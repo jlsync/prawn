@@ -108,7 +108,7 @@ module Prawn
               characters.map { |c|
                 check_bounds!(c)
                 [cmap[c]].pack('n')
-              }.join(''),
+              }.join,
             ],
           ]
         end

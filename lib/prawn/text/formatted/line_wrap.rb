@@ -203,7 +203,7 @@ module Prawn
             whitespace(encoding),
             soft_hyphen(encoding),
             hyphen(encoding),
-          ].join('')
+          ].join
         end
 
         def zero_width_space(encoding = ::Encoding::UTF_8)
