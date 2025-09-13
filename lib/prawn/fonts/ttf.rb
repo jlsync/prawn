@@ -164,17 +164,16 @@ module Prawn
       def compute_width_of(string, options = {})
         scale = (options[:size] || size) / 1000.0
         if options[:kerning]
-          kern(string).reduce(0) { |s, r|
-            if r.is_a?(Numeric)
-              s - r
+          units = kern(string).sum { |elt|
+            if elt.is_a?(Numeric)
+              -elt
             else
-              r.reduce(s) { |a, e| a + character_width_by_code(e) }
+              elt.sum { |code| character_width_by_code(code) }
             end
-          } * scale
+          }
+          units * scale
         else
-          string.codepoints.reduce(0) { |s, r|
-            s + character_width_by_code(r)
-          } * scale
+          string.codepoints.sum { |code| character_width_by_code(code) } * scale
         end
       end
 
@@ -206,29 +205,30 @@ module Prawn
 
         if options[:kerning]
           last_subset = nil
-          kern(text).reduce([]) do |result, element|
+          result = []
+          kern(text).each do |element|
             if element.is_a?(Numeric)
-              unless result.last[1].is_a?(Array)
-                result.last[1] = [result.last[1]]
+              unless result.empty?
+                unless result.last[1].is_a?(Array)
+                  result.last[1] = [result.last[1]]
+                end
+                result.last[1] << element
               end
-              result.last[1] << element
-              result
             else
               encoded = @subsets.encode(element)
 
-              if encoded.first[0] == last_subset
+              if !encoded.empty? && !result.empty? && encoded.first[0] == last_subset
                 result.last[1] << encoded.first[1]
                 encoded.shift
               end
 
               if encoded.any?
                 last_subset = encoded.last[0]
-                result + encoded
-              else
-                result
+                result.concat(encoded)
               end
             end
           end
+          result
         else
           @subsets.encode(text.unpack('U*'))
         end

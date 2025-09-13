@@ -324,9 +324,7 @@ module Prawn
       end
 
       def unscaled_width_of(string)
-        string.bytes.reduce(0) do |s, r|
-          s + @glyph_table[r]
-        end
+        string.bytes.sum { |r| @glyph_table[r] }
       end
     end
   end
