@@ -176,8 +176,8 @@ module Prawn
             Regexp.union(
               common_whitespaces +
               [
-                zero_width_space(encoding),
-                soft_hyphen(encoding),
+                zero_width_space_cached(encoding),
+                soft_hyphen_cached(encoding),
                 hyphen(encoding),
               ].compact,
             )
@@ -189,6 +189,12 @@ module Prawn
         rescue ::Encoding::InvalidByteSequenceError,
                ::Encoding::UndefinedConversionError
           nil
+        end
+
+        def soft_hyphen_cached(encoding)
+          @soft_hyphen_cache ||= {}
+          return @soft_hyphen_cache[encoding] if @soft_hyphen_cache.key?(encoding)
+          @soft_hyphen_cache[encoding] = soft_hyphen(encoding)
         end
 
         def break_chars(encoding = ::Encoding::UTF_8)
@@ -266,7 +272,7 @@ module Prawn
           else
             update_output_based_on_last_fragment(
               fragment,
-              soft_hyphen(fragment.encoding),
+              soft_hyphen_cached(fragment.encoding),
             )
             update_line_status_based_on_last_output
             pull_preceding_fragment_to_join_this_one?(fragment)
@@ -362,7 +368,7 @@ module Prawn
 
         def append_char(char)
           # kerning doesn't make sense in the context of a single character
-          char_width = @document.width_of(char)
+          char_width = char_width_cached(char)
 
           if @accumulated_width + char_width <= @width
             @accumulated_width += char_width
@@ -371,6 +377,18 @@ module Prawn
           else
             false
           end
+        end
+
+        def char_width_cached(char)
+          @char_width_cache ||= {}
+          font_id = @document.font.object_id
+          key = [font_id, @document.font_size, char]
+          if (w = @char_width_cache[key])
+            return w
+          end
+          w = @document.width_of(char)
+          @char_width_cache[key] = w
+          w
         end
       end
     end

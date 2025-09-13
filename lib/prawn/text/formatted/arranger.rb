@@ -58,9 +58,7 @@ module Prawn
             raise NotFinalized.new(method: 'space_count')
           end
 
-          @fragments.reduce(0) do |sum, fragment|
-            sum + fragment.space_count
-          end
+          @fragments.sum(&:space_count)
         end
 
         # Line width.
@@ -72,9 +70,7 @@ module Prawn
             raise raise NotFinalized.new(method: 'line_width')
           end
 
-          @fragments.reduce(0) do |sum, fragment|
-            sum + fragment.width
-          end
+          @fragments.sum(&:width)
         end
 
         # Line text.
