@@ -91,6 +91,7 @@ module Prawn
         @bounding_boxes = font_data[:bounding_boxes]
         @kern_pairs = font_data[:kern_pairs]
         @kern_pair_table = font_data[:kern_pair_table]
+        @kern_pair_index = font_data[:kern_pair_index]
         @attributes = font_data[:attributes]
 
         @ascender = Integer(@attributes.fetch('ascender', '0'), 10)
@@ -276,6 +277,13 @@ module Prawn
             h[p[0].map { |n| character_hash[n] }] = p[1]
           end
 
+        # Same pairs keyed by a single integer (first_byte << 8 | second_byte)
+        # so that kerning lookups don't allocate an Array per byte.
+        data[:kern_pair_index] =
+          data[:kern_pair_table].each_with_object({}) do |((a, b), k), h|
+            h[(a << 8) | b] = k if a && b
+          end
+
         data.each_value(&:freeze)
         data.freeze
       end
@@ -304,7 +312,7 @@ module Prawn
         last_byte = nil
 
         string.each_byte do |byte|
-          k = last_byte && @kern_pair_table[[last_byte, byte]]
+          k = last_byte && @kern_pair_index[(last_byte << 8) | byte]
           if k
             kerned << -k << [byte]
           else

@@ -74,7 +74,7 @@ module Prawn
         def empty_line?(fragment)
           empty = line_empty? && fragment.empty? && next_string_newline?
           if empty
-            @arranger.update_last_string('', '', soft_hyphen(fragment.encoding))
+            @arranger.update_last_string('', '', soft_hyphen_cached(fragment.encoding))
           end
           empty
         end
@@ -102,7 +102,9 @@ module Prawn
             @newline_encountered = true
             false
           else
-            tokenize(fragment).each do |segment|
+            # Scan lazily: only the tokens that fit on this line are needed, so
+            # avoid tokenizing the (possibly long) remainder of the fragment.
+            fragment.scan(scan_pattern(fragment.encoding)) do |segment|
               segment_width =
                 if segment == zero_width_space_cached(segment.encoding)
                   0
@@ -112,7 +114,7 @@ module Prawn
 
               if @accumulated_width + segment_width <= @width
                 @accumulated_width += segment_width
-                shy = soft_hyphen(segment.encoding)
+                shy = soft_hyphen_cached(segment.encoding)
                 if segment[-1] == shy
                   @accumulated_width -= soft_hyphen_width_cached(shy)
                 end
