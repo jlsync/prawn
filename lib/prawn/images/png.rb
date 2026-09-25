@@ -229,7 +229,7 @@ module Prawn
         if palette.empty?
           obj.data[:ColorSpace] = color
         else
-          # embed the colour palette in the PDF as a object stream
+          # embed the colour palette in the PDF as an object stream
           palette_obj = document.ref!({})
           palette_obj << palette
 
@@ -264,7 +264,7 @@ module Prawn
         end
 
         # For PNG color types 4 and 6, the transparency data is stored as
-        # a alpha channel mixed in with the main image data. The PNG class
+        # an alpha channel mixed in with the main image data. The PNG class
         # separates it out for us and makes it available via the alpha_channel
         # attribute
         if alpha_channel?
