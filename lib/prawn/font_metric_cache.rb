@@ -35,9 +35,7 @@ module Prawn
 
       key = CacheEntry.new(f, @document.font_size, options, encoded_string)
 
-      @cache[key] ||= f.compute_width_of(encoded_string, options)
-
-      length = @cache[key]
+      length = (@cache[key] ||= f.compute_width_of(encoded_string, options))
 
       character_count = @document.font.character_count(encoded_string)
       if character_count.positive?
