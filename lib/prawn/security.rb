@@ -290,7 +290,7 @@ module PDF
       def encrypted_object(key)
         @on_encode&.call(self)
 
-        output = +"#{@identifier} #{gen} obj\n"
+        output = "#{@identifier} #{gen} obj\n"
         if @stream.empty?
           output <<
             PDF::Core.encrypted_pdf_object(data, key, @identifier, gen) << "\n"

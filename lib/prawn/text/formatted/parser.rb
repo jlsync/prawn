@@ -42,7 +42,7 @@ module Prawn
         UNESCAPE_CHARS = ESCAPE_CHARS.invert.freeze
 
         # Precompiled scan pattern for paragraph splitting
-        SCAN_PATTERN = /[^\n]+|\n/.freeze
+        SCAN_PATTERN = /[^\n]+|\n/
 
         # Parse formatted string.
         #

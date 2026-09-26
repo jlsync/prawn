@@ -1,6 +1,17 @@
 inherit_gem:
   prawn-dev: rubocop.yml
 
+AllCops:
+  TargetRubyVersion: 3.3
+
+# Anonymous argument/block forwarding would rewrite most delegating method
+# signatures and detach them from their documented @param names.
+Style/ArgumentsForwarding:
+  Enabled: false
+
+Naming/BlockForwarding:
+  Enabled: false
+
 Lint/ConstantDefinitionInBlock:
   Exclude:
     - manual/text/formatted_callbacks.rb

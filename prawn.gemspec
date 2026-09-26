@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
     end
   end
 
-  spec.required_ruby_version = '>= 2.7'
+  spec.required_ruby_version = '>= 3.3'
   spec.required_rubygems_version = '>= 1.3.6'
 
   spec.authors = [
