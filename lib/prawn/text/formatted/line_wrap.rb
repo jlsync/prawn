@@ -260,6 +260,7 @@ module Prawn
           if (w = @soft_hyphen_width_cache[key])
             return w
           end
+
           w = @document.width_of(shy_char, kerning: @kerning)
           @soft_hyphen_width_cache[key] = w
           w
@@ -411,6 +412,7 @@ module Prawn
           if (w = @char_width_cache[key])
             return w
           end
+
           w = @document.width_of(char)
           @char_width_cache[key] = w
           w

@@ -18,9 +18,9 @@ def data_for_table(columns, rows, string_size)
   Array.new(rows) { Array.new(columns) { String.random(string_size) } }
 end
 
-def measure(label)
-  t = Benchmark.realtime { yield }
-  puts format('%-40s %.3fs', label + ':', t)
+def measure(label, &block)
+  t = Benchmark.realtime(&block)
+  puts(format('%<label>-40s %<time>.3fs', label: "#{label}:", time: t))
 end
 
 def render_table_case
@@ -126,7 +126,7 @@ def with_uncached_line_wrap
   yield
 ensure
   methods.each do |m|
-    klass.send(:define_method, m, origs[m])
+    klass.__send__(:define_method, m, origs[m])
   end
 end
 
@@ -135,4 +135,3 @@ measure('Cached (current)') { render_table_case }
 with_uncached_line_wrap do
   measure('Uncached (pre-change approx)') { render_table_case }
 end
-

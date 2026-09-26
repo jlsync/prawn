@@ -164,13 +164,14 @@ module Prawn
       def compute_width_of(string, options = {})
         scale = (options[:size] || size) / 1000.0
         if options[:kerning]
-          units = kern(string).sum { |elt|
-            if elt.is_a?(Numeric)
-              -elt
-            else
-              elt.sum { |code| character_width_by_code(code) }
-            end
-          }
+          units =
+            kern(string).sum { |elt|
+              if elt.is_a?(Numeric)
+                -elt
+              else
+                elt.sum { |code| character_width_by_code(code) }
+              end
+            }
           units * scale
         else
           string.codepoints.sum { |code| character_width_by_code(code) } * scale
@@ -187,7 +188,7 @@ module Prawn
       # Does this font contain kerning data.
       #
       # @return [Boolean]
-      def has_kerning_data? # rubocop: disable Naming/PredicateName
+      def has_kerning_data?
         @has_kerning_data
       end
 
@@ -208,12 +209,10 @@ module Prawn
           result = []
           kern(text).each do |element|
             if element.is_a?(Numeric)
-              unless result.empty?
-                unless result.last[1].is_a?(Array)
-                  result.last[1] = [result.last[1]]
-                end
-                result.last[1] << element
-              end
+              next if result.empty?
+
+              result.last[1] = [result.last[1]] unless result.last[1].is_a?(Array)
+              result.last[1] << element
             else
               encoded = @subsets.encode(element)
 

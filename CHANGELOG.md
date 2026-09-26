@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Require Ruby 3.3 or later
+
+Prawn now requires Ruby 3.3 or later. CI tests MRI 3.3, 4.0 and head, and
+JRuby 10.0 and 10.1.
+
 ## PrawnPDF 2.5.0
 
 ### Full font embedding

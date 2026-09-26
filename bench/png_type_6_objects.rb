@@ -14,11 +14,12 @@ end.render
 after = GC.stat
 
 # Support Ruby 2.x (:total_allocated_object) and Ruby 3.x+ (:total_allocated_objects)
-key = if after.key?(:total_allocated_objects)
-        :total_allocated_objects
-      else
-        :total_allocated_object
-      end
+key =
+  if after.key?(:total_allocated_objects)
+    :total_allocated_objects
+  else
+    :total_allocated_object
+  end
 
 total = after[key] - before[key]
 

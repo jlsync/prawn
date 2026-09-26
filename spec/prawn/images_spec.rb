@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'set'
 require 'pathname'
 
 describe Prawn::Images do

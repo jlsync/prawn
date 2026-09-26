@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-puts "Prawn specs: Running on Ruby Version: #{RUBY_VERSION}"
+puts "Prawn specs: Running on Ruby Version: #{RUBY_VERSION}" # rubocop: disable RSpec/Output
 
 if ENV['COVERAGE']
   require 'simplecov'
@@ -20,7 +20,7 @@ require 'pdf/inspector'
 
 # Requires supporting ruby files with custom matchers and macros, etc,
 # in spec/extensions/ and its subdirectories.
-Dir[File.join(__dir__, 'extensions', '**', '*.rb')].sort.each { |f| require f }
+Dir[File.join(__dir__, 'extensions', '**', '*.rb')].each { |f| require f }
 
 RSpec.configure do |config|
   config.include(EncodingHelpers)
