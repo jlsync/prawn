@@ -7,6 +7,16 @@ module Prawn
       #
       # @private
       class LineWrap
+        # Patterns and characters below depend only on the text encoding, so
+        # they are cached per class rather than per instance: a new LineWrap
+        # is created for every text box.
+        @encoding_caches = Hash.new { |h, name| h[name] = {} }
+
+        class << self
+          # @private
+          attr_reader :encoding_caches
+        end
+
         # The width of the last wrapped line.
         #
         # @return [Number]
@@ -137,9 +147,7 @@ module Prawn
         # The pattern used to determine chunks of text to place on a given line
         #
         def scan_pattern(encoding = ::Encoding::UTF_8)
-          # Cache per-encoding to avoid rebuilding identical regexes repeatedly
-          @scan_pattern_cache ||= {}
-          @scan_pattern_cache[encoding] ||= begin
+          encoding_cached(:scan_pattern, encoding) do
             ebc = break_chars(encoding)
             eshy = soft_hyphen(encoding)
             ehy = hyphen(encoding)
@@ -167,9 +175,7 @@ module Prawn
         # word breaking is needed
         #
         def word_division_scan_pattern(encoding = ::Encoding::UTF_8)
-          # Cache per-encoding to avoid rebuilding identical regexes repeatedly
-          @word_division_scan_cache ||= {}
-          @word_division_scan_cache[encoding] ||= begin
+          encoding_cached(:word_division_scan_pattern, encoding) do
             common_whitespaces =
               ["\t", "\n", "\v", "\r", ' '].map { |c|
                 c.encode(encoding)
@@ -194,18 +200,22 @@ module Prawn
         end
 
         def soft_hyphen_cached(encoding)
+          # Called per token: memoize per instance in front of the shared cache.
           @soft_hyphen_cache ||= {}
           return @soft_hyphen_cache[encoding] if @soft_hyphen_cache.key?(encoding)
-          @soft_hyphen_cache[encoding] = soft_hyphen(encoding)
+
+          @soft_hyphen_cache[encoding] =
+            encoding_cached(:soft_hyphen, encoding) { soft_hyphen(encoding)&.freeze }
         end
 
         def break_chars(encoding = ::Encoding::UTF_8)
-          @break_chars_cache ||= {}
-          @break_chars_cache[encoding] ||= [
-            whitespace(encoding),
-            soft_hyphen(encoding),
-            hyphen(encoding),
-          ].join
+          encoding_cached(:break_chars, encoding) do
+            [
+              whitespace(encoding),
+              soft_hyphen(encoding),
+              hyphen(encoding),
+            ].join.freeze
+          end
         end
 
         def zero_width_space(encoding = ::Encoding::UTF_8)
@@ -216,9 +226,12 @@ module Prawn
         end
 
         def zero_width_space_cached(encoding)
+          # Called per token: memoize per instance in front of the shared cache.
           @zws_cache ||= {}
           return @zws_cache[encoding] if @zws_cache.key?(encoding)
-          @zws_cache[encoding] = zero_width_space(encoding)
+
+          @zws_cache[encoding] =
+            encoding_cached(:zero_width_space, encoding) { zero_width_space(encoding)&.freeze }
         end
 
         def whitespace(encoding = ::Encoding::UTF_8)
@@ -230,6 +243,13 @@ module Prawn
         rescue ::Encoding::InvalidByteSequenceError,
                ::Encoding::UndefinedConversionError
           nil
+        end
+
+        def encoding_cached(name, encoding)
+          cache = LineWrap.encoding_caches[name]
+          return cache[encoding] if cache.key?(encoding)
+
+          cache[encoding] = yield
         end
 
         def soft_hyphen_width_cached(shy_char)
@@ -330,18 +350,21 @@ module Prawn
         end
 
         def breakable_start_regex(encoding)
-          @breakable_start_regex_cache ||= {}
-          @breakable_start_regex_cache[encoding] ||= Regexp.new("^[#{break_chars(encoding)}]")
+          encoding_cached(:breakable_start_regex, encoding) do
+            Regexp.new("^[#{break_chars(encoding)}]")
+          end
         end
 
         def breakable_end_regex(encoding)
-          @breakable_end_regex_cache ||= {}
-          @breakable_end_regex_cache[encoding] ||= Regexp.new("[#{break_chars(encoding)}]$")
+          encoding_cached(:breakable_end_regex, encoding) do
+            Regexp.new("[#{break_chars(encoding)}]$")
+          end
         end
 
         def last_word_regex(encoding)
-          @last_word_regex_cache ||= {}
-          @last_word_regex_cache[encoding] ||= Regexp.new("[^#{break_chars(encoding)}]*$")
+          encoding_cached(:last_word_regex, encoding) do
+            Regexp.new("[^#{break_chars(encoding)}]*$")
+          end
         end
 
         def line_finished?

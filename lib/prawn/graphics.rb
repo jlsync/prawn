@@ -765,7 +765,9 @@ module Prawn
     end
 
     def map_to_absolute(*point)
-      x, y = point.flatten
+      # Avoid Array#flatten for the common `([x, y])` and `(x, y)` forms.
+      x, y = point.length == 1 ? point[0] : point
+      x, y = point.flatten if x.respond_to?(:to_ary) || y.respond_to?(:to_ary)
       [@bounding_box.absolute_left + x, @bounding_box.absolute_bottom + y]
     end
 
