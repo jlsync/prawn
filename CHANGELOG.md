@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Cache parsed TrueType fonts between documents
+
+Parsing a TrueType/OpenType font file is most of the cost of rendering a short
+document. Each thread now keeps the font files it has parsed, keyed by path and
+modification time, and reuses them for later documents: a one-page invoice in
+DejaVu Sans renders about 2.3x faster. The cache is per thread because a parsed
+file isn't safe to share between threads. Fonts loaded from IO objects, .ttc
+collections and dfonts are not cached. Disable it with
+`Prawn::Fonts::TTF.cache_parsed_files = false`.
+
 ### Require Ruby 3.3 or later
 
 Prawn now requires Ruby 3.3 or later. CI tests MRI 3.3, 4.0 and head, and
