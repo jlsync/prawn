@@ -129,7 +129,7 @@ module Prawn
       # Does this font contain kerning data.
       #
       # @return [Boolean]
-      def has_kerning_data? # rubocop: disable Naming/PredicateName
+      def has_kerning_data?
         @kern_pairs.any?
       end
 
@@ -291,6 +291,7 @@ module Prawn
       def parse_generic_afm_attribute(line, hash)
         m = /(^\w+)\s+(.*)/.match(line)
         return unless m
+
         key = m[1].to_s.downcase
         value = m[2]
 

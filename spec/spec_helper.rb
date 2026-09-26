@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-puts "Prawn specs: Running on Ruby Version: #{RUBY_VERSION}"
+puts "Prawn specs: Running on Ruby Version: #{RUBY_VERSION}" # rubocop: disable RSpec/Output
 
 if ENV['COVERAGE']
   require 'simplecov'

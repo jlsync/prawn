@@ -84,11 +84,12 @@ module Prawn
 
           out = +''
           @fragments.each do |fragment|
-            piece = begin
-              fragment.text.dup.encode(::Encoding::UTF_8)
-            rescue ::Encoding::InvalidByteSequenceError, ::Encoding::UndefinedConversionError
-              fragment.text.dup.force_encoding(::Encoding::UTF_8)
-            end
+            piece =
+              begin
+                fragment.text.dup.encode(::Encoding::UTF_8)
+              rescue ::Encoding::InvalidByteSequenceError, ::Encoding::UndefinedConversionError
+                fragment.text.dup.force_encoding(::Encoding::UTF_8)
+              end
             out << piece
           end
           out

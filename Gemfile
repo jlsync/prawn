@@ -4,9 +4,10 @@ source 'https://rubygems.org'
 
 gemspec
 
-# Use the jlsync fork of pdf-core, which carries serialization performance
-# fixes not yet in a pdf-core release.
+# Use the jlsync forks of pdf-core and ttfunk, which carry performance fixes
+# not yet in a release.
 gem 'pdf-core', github: 'jlsync/pdf-core'
+gem 'ttfunk', github: 'jlsync/ttfunk'
 
 # Evaluate Gemfile.local if it exists
 if File.exist?("#{__FILE__}.local")

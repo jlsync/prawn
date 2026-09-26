@@ -106,7 +106,7 @@ Benchmark.bmbm do |x|
   x.report('scan_pattern cached') do
     c = Cached.new
     iterations.times do
-      encodings.each { |e| c.send(:scan_pattern, e) }
+      encodings.each { |e| c.__send__(:scan_pattern, e) }
     end
   end
 
@@ -120,7 +120,7 @@ Benchmark.bmbm do |x|
   x.report('word_division_pattern cached') do
     c = Cached.new
     iterations.times do
-      encodings.each { |e| c.send(:word_division_scan_pattern, e) }
+      encodings.each { |e| c.__send__(:word_division_scan_pattern, e) }
     end
   end
 
@@ -134,7 +134,7 @@ Benchmark.bmbm do |x|
   x.report('break_start_regex cached') do
     c = Cached.new
     iterations.times do
-      encodings.each { |e| c.send(:breakable_start_regex, e) }
+      encodings.each { |e| c.__send__(:breakable_start_regex, e) }
     end
   end
 
@@ -148,7 +148,7 @@ Benchmark.bmbm do |x|
   x.report('break_end_regex cached') do
     c = Cached.new
     iterations.times do
-      encodings.each { |e| c.send(:breakable_end_regex, e) }
+      encodings.each { |e| c.__send__(:breakable_end_regex, e) }
     end
   end
 
@@ -162,7 +162,7 @@ Benchmark.bmbm do |x|
   x.report('last_word_regex cached') do
     c = Cached.new
     iterations.times do
-      encodings.each { |e| c.send(:last_word_regex, e) }
+      encodings.each { |e| c.__send__(:last_word_regex, e) }
     end
   end
 
