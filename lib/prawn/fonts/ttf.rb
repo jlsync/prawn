@@ -52,6 +52,38 @@ module Prawn
         MESSAGE_WITH_FONT = 'Can not detect a postscript name in font %<font>s'
       end
 
+      # Thread variable holding this thread's cache of parsed font files.
+      PARSED_FILE_CACHE = :prawn_ttf_parsed_file_cache
+      private_constant :PARSED_FILE_CACHE
+
+      class << self
+        # Whether parsed font files are cached between documents (default:
+        # true).
+        #
+        # Parsing a font file is a large part of rendering a short document,
+        # so each thread keeps the files it has parsed, keyed by path and
+        # modification time, and reuses them for later documents. The cache
+        # is per thread because a parsed file is not safe to share between
+        # threads. Fonts loaded from IO objects, TrueType collections (.ttc)
+        # and dfonts are not cached. Set this to false to trade the speed-up
+        # for lower memory use.
+        #
+        # @param value [Boolean]
+        attr_writer :cache_parsed_files
+
+        # @return [Boolean]
+        def cache_parsed_files?
+          @cache_parsed_files != false
+        end
+
+        # Empties the current thread's cache of parsed font files.
+        #
+        # @return [void]
+        def clear_parsed_file_cache
+          Thread.current.thread_variable_set(PARSED_FILE_CACHE, nil)
+        end
+      end
+
       # TTFunk font.
       # @return [TTFunk::File]
       attr_reader :ttf
@@ -625,7 +657,33 @@ module Prawn
       end
 
       def read_ttf_file
-        TTFunk::File.open(@name)
+        path = cacheable_path
+        mtime = path && file_mtime(path)
+        return TTFunk::File.open(@name) unless mtime
+
+        cache = Thread.current.thread_variable_get(PARSED_FILE_CACHE) ||
+          Thread.current.thread_variable_set(PARSED_FILE_CACHE, {})
+        cached_mtime, ttf = cache[path]
+        return ttf if cached_mtime == mtime
+
+        ttf = TTFunk::File.open(@name)
+        cache[path] = [mtime, ttf]
+        ttf
+      end
+
+      def file_mtime(path)
+        File.mtime(path)
+      rescue SystemCallError
+        nil
+      end
+
+      def cacheable_path
+        return unless TTF.cache_parsed_files?
+        return if @name.respond_to?(:read)
+
+        File.expand_path(File.path(@name))
+      rescue TypeError
+        nil
       end
     end
   end
