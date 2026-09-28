@@ -49,8 +49,8 @@ module Prawn
     #   @param y [Number]
     #   @return [void]
     def move_to(*point)
-      xy = PDF::Core.real_params(map_to_absolute(point))
-      renderer.add_content("#{xy} m")
+      x, y = map_to_absolute(point)
+      renderer.add_content("#{PDF::Core.real(x)} #{PDF::Core.real(y)} m")
     end
 
     # Draws a line from the current drawing position to the specified point.
@@ -68,8 +68,8 @@ module Prawn
     #   @param y [Number]
     #   @return [void]
     def line_to(*point)
-      xy = PDF::Core.real_params(map_to_absolute(point))
-      renderer.add_content("#{xy} l")
+      x, y = map_to_absolute(point)
+      renderer.add_content("#{PDF::Core.real(x)} #{PDF::Core.real(y)} l")
     end
 
     # Draws a Bezier curve from the current drawing position to the
@@ -183,7 +183,24 @@ module Prawn
     #   @param y2 [Number]
     #   @return [void]
     def line(*points)
-      x0, y0, x1, y1 = points.flatten
+      # The usual two point arrays and four scalar arguments need no flattening.
+      tuple_pair = points.length == 2 &&
+        points[0].instance_of?(Array) && points[1].instance_of?(Array) &&
+        points[0].length == 2 && points[1].length == 2
+      if tuple_pair
+        x0, y0 = points[0]
+        x1, y1 = points[1]
+      else
+        x0, y0, x1, y1 = points
+      end
+
+      # Preserve recursive flattening and array-like arguments, including
+      # objects whose implicit array conversion is private.
+      if (!tuple_pair && points.length != 4) ||
+          x0.respond_to?(:to_ary, true) || y0.respond_to?(:to_ary, true) ||
+          x1.respond_to?(:to_ary, true) || y1.respond_to?(:to_ary, true)
+        x0, y0, x1, y1 = points.flatten
+      end
       move_to(x0, y0)
       line_to(x1, y1)
     end

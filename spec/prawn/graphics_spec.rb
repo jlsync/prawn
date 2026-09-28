@@ -6,6 +6,81 @@ describe Prawn::Graphics do
   let(:pdf) { create_pdf }
 
   describe 'When drawing a line' do
+    {
+      'one flat array' => [[100, 600, 100, 500]],
+      'one array of points' => [[[100, 600], [100, 500]]],
+      'nested point coordinates' => [[[100], [600]], [[100], [500]]],
+      'nested scalar arguments' => [100, [600], [100], 500],
+      'uneven point arrays' => [[100], [600, 100, 500]],
+    }.each do |description, arguments|
+      it "draws a line with #{description}" do
+        pdf.line(*arguments)
+
+        line = PDF::Inspector::Graphics::Line.analyze(pdf.render)
+        expect(line.points).to eq([[100, 600], [100, 500]])
+      end
+    end
+
+    it 'supports implicit array conversion on point objects' do
+      point_class =
+        Class.new do
+          def to_ary
+            [100, 600]
+          end
+        end
+      pdf.line(point_class.new, [100, 500])
+
+      line = PDF::Inspector::Graphics::Line.analyze(pdf.render)
+      expect(line.points).to eq([[100, 600], [100, 500]])
+    end
+
+    it 'supports private implicit array conversion on coordinates' do
+      coordinate_class =
+        Class.new do
+          private
+
+          def to_ary
+            [100]
+          end
+        end
+      pdf.line([coordinate_class.new, 600], [100, 500])
+
+      line = PDF::Inspector::Graphics::Line.analyze(pdf.render)
+      expect(line.points).to eq([[100, 600], [100, 500]])
+    end
+
+    it 'accepts frozen point arrays without modifying them' do
+      from = [100, 600].freeze
+      to = [100, 500].freeze
+      pdf.line(from, to)
+
+      expect(from).to eq([100, 600])
+      expect(to).to eq([100, 500])
+      line = PDF::Inspector::Graphics::Line.analyze(pdf.render)
+      expect(line.points).to eq([from, to])
+    end
+
+    it 'preserves PDF number formatting for fractional coordinates' do
+      pdf.move_to(10.123456, 20.987654)
+      pdf.line_to([Rational(1, 3), -Rational(2, 3)])
+
+      expect(pdf.state.page.content.stream.filtered_stream).to include(
+        "10.12346 20.98765 m\n0.33333 -0.66667 l\n",
+      )
+    end
+
+    it 'keeps the overridable drawing methods in the stroke_line call path' do
+      %i[line move_to line_to stroke].each do |name|
+        allow(pdf).to receive(name).and_call_original
+      end
+      pdf.stroke_line([100, 600], [100, 500])
+
+      expect(pdf).to have_received(:line).with([100, 600], [100, 500]).ordered
+      expect(pdf).to have_received(:move_to).with(100, 600).ordered
+      expect(pdf).to have_received(:line_to).with(100, 500).ordered
+      expect(pdf).to have_received(:stroke).with(no_args).ordered
+    end
+
     it 'draws a line from (100,600) to (100,500)' do
       pdf.line([100, 600], [100, 500])
 
