@@ -224,6 +224,99 @@ describe Prawn::Graphics do
   end
 
   describe 'When setting colors' do
+    describe 'RGB conversion caching' do
+      it 'reuses conversions across fill and stroke without skipping color writes' do
+        allow(pdf).to receive(:normalize_color).and_call_original
+        pdf.fill_color('ffcccc')
+        pdf.stroke_color('ffcccc')
+        pdf.fill_color('ffcccc')
+
+        colors = PDF::Inspector::Graphics::Color.analyze(pdf.render)
+        expect(pdf).to have_received(:normalize_color).with('ffcccc').once
+        expect(colors.fill_color_count).to eq(2)
+        expect(colors.stroke_color_count).to eq(1)
+        expect(colors.fill_color).to eq([1.0, 0.8, 0.8])
+        expect(colors.stroke_color).to eq([1.0, 0.8, 0.8])
+      end
+
+      it 'does not retain mutable input strings as cache keys' do
+        color = +'ff0000'
+        pdf.fill_color(color)
+        color.replace('00ff00')
+        pdf.fill_color(color)
+        pdf.stroke_color('ff0000')
+
+        colors = PDF::Inspector::Graphics::Color.analyze(pdf.render)
+        expect(colors.fill_color).to eq([0.0, 1.0, 0.0])
+        expect(colors.stroke_color).to eq([1.0, 0.0, 0.0])
+        expect(color).to_not be_frozen
+      end
+
+      it 'keeps conversions separate between documents' do
+        other = create_pdf
+        pdf.fill_color('abcdef')
+        allow(other).to receive(:normalize_color).and_call_original
+        other.fill_color('abcdef')
+
+        expect(other).to have_received(:normalize_color).with('abcdef').once
+      end
+
+      it 'bounds the cache while retaining existing entries when full' do
+        64.times { |i| pdf.fill_color(format('%06x', i)) }
+        allow(pdf).to receive(:normalize_color).and_call_original
+        2.times { pdf.fill_color('abcdef') }
+        pdf.stroke_color('000001')
+
+        expect(pdf.instance_variable_get(:@rgb_color_cache).size).to eq(64)
+        expect(pdf).to have_received(:normalize_color).with('abcdef').twice
+        expect(pdf).to_not have_received(:normalize_color).with('000001')
+        colors = PDF::Inspector::Graphics::Color.analyze(pdf.render)
+        expect(colors.fill_color).to eq([0.67059, 0.80392, 0.93725])
+      end
+
+      it 'still validates a previously cached string after mutation' do
+        color = +'ff0000'
+        pdf.fill_color(color)
+        color.replace('zz0000')
+
+        expect { pdf.fill_color(color) }.to raise_error(ArgumentError)
+      end
+
+      it 'converts mutable CMYK arrays each time' do
+        color = [0, 100, 0, 0]
+        pdf.fill_color(color)
+        color[1] = 50
+        pdf.stroke_color(color)
+
+        colors = PDF::Inspector::Graphics::Color.analyze(pdf.render)
+        expect(colors.fill_color).to eq([0.0, 1.0, 0.0, 0.0])
+        expect(colors.stroke_color).to eq([0.0, 0.5, 0.0, 0.0])
+      end
+
+      it 'does not cache String subclasses with custom conversion behavior' do
+        color = Class.new(String).new('abcdef')
+        allow(pdf).to receive(:normalize_color).and_call_original
+        2.times { pdf.fill_color(color) }
+
+        expect(pdf).to have_received(:normalize_color).with(color).twice
+      end
+
+      it 'emits cached RGB colors and color spaces inside stamps' do
+        pdf.fill_color('ffcccc')
+        pdf.stroke_color('ffcccc')
+        pdf.create_stamp('cached colors') do
+          pdf.fill_color('ffcccc')
+          pdf.stroke_color('ffcccc')
+        end
+        pdf.stamp('cached colors')
+
+        stamps = PDF::Inspector::XObject.analyze(pdf.render)
+        stream = stamps.xobject_streams[:Stamp1].data
+        expect(stream).to include("/DeviceRGB cs\n1.0 0.8 0.8 scn")
+        expect(stream).to include("/DeviceRGB CS\n1.0 0.8 0.8 SCN")
+      end
+    end
+
     it 'sets stroke colors' do
       pdf.stroke_color('ffcccc')
       colors = PDF::Inspector::Graphics::Color.analyze(pdf.render)

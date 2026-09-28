@@ -107,6 +107,11 @@ module Prawn
 
       COLOR_SPACES = %i[DeviceRGB DeviceCMYK Pattern].freeze
 
+      # Keep repeated RGB conversions local to the document and bounded even
+      # when a document uses many distinct colors.
+      RGB_COLOR_CACHE_SIZE = 64
+      private_constant :RGB_COLOR_CACHE_SIZE
+
       private
 
       def process_color(*color)
@@ -152,7 +157,18 @@ module Prawn
       end
 
       def color_to_s(color)
-        PDF::Core.real_params(normalize_color(color))
+        unless color.instance_of?(String) && color.bytesize == 6
+          return PDF::Core.real_params(normalize_color(color))
+        end
+
+        cache = (@rgb_color_cache ||= {})
+        converted = cache[color]
+        return converted if converted
+
+        converted = PDF::Core.real_params(normalize_color(color))
+        # Hash copies mutable String keys; never retain the caller's string.
+        cache[color] = converted.freeze if cache.size < RGB_COLOR_CACHE_SIZE
+        converted
       end
 
       def color_space(color)
