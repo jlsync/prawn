@@ -7,6 +7,51 @@ describe Prawn::Text::Formatted::Arranger do
   let(:arranger) { described_class.new(pdf) }
 
   describe '#format_array' do
+    it 'copies frozen single-line text before wrapping can modify it' do
+      text = '  hello'
+      input = { text: text, styles: [:bold] }.freeze
+      arranger.format_array = [input]
+      arranger.next_string.lstrip!
+
+      expect(text).to eq('  hello')
+      expect(arranger.consumed.first[:text]).to eq('hello')
+      expect(arranger.consumed.first[:styles]).to eq([:bold])
+    end
+
+    it 'omits empty text but preserves other single-line whitespace' do
+      arranger.format_array = [{ text: '' }, { text: " \t\r\v\f " }]
+
+      expect(arranger.unconsumed).to eq([{ text: " \t\r\v\f " }])
+    end
+
+    it 'preserves the encoding of single-line ASCII text' do
+      text = 'hello'.encode(Encoding::ISO_8859_1)
+      arranger.format_array = [{ text: text }]
+
+      expect(arranger.next_string.encoding).to eq(Encoding::ISO_8859_1)
+    end
+
+    it 'preserves Unicode text and consecutive and trailing newlines' do
+      arranger.format_array = [{ text: "café\n\n日本語\n" }]
+
+      expect(arranger.unconsumed.map { |hash| hash[:text] })
+        .to eq(%W[café \n \n 日本語 \n])
+    end
+
+    it 'still rejects invalid UTF-8' do
+      text = "\xff".b.force_encoding(Encoding::UTF_8)
+
+      expect { arranger.format_array = [{ text: text }] }
+        .to raise_error(ArgumentError, /invalid byte sequence/)
+    end
+
+    it 'retains scanning behavior for String subclasses' do
+      text = Class.new(String).new('hello')
+      arranger.format_array = [{ text: text }]
+
+      expect(arranger.next_string).to be_an_instance_of(String)
+    end
+
     it 'populates the unconsumed array' do
       array = [
         { text: 'hello ' },
@@ -422,6 +467,43 @@ describe Prawn::Text::Formatted::Arranger do
   end
 
   describe '#max_line_height' do
+    it 'retains all three maxima across differently sized fragments' do
+      arranger.format_array = [
+        { text: 'large', size: 28 },
+        { text: 'small', size: 8 },
+        { text: 'medium', size: 16, styles: [:bold] },
+      ]
+      while arranger.next_string
+      end
+      arranger.finalize_line
+
+      expect(arranger.max_line_height).to eq(arranger.fragments.map(&:line_height).max)
+      expect(arranger.max_ascender).to eq(arranger.fragments.map(&:ascender).max)
+      expect(arranger.max_descender).to eq(arranger.fragments.map(&:descender).max)
+    end
+
+    it 'resets all three maxima for an empty new line' do
+      arranger.format_array = [{ text: 'large', size: 28 }]
+      arranger.next_string
+      arranger.finalize_line
+      arranger.initialize_line
+      arranger.finalize_line
+
+      expect(arranger.max_line_height).to eq(0)
+      expect(arranger.max_ascender).to eq(0)
+      expect(arranger.max_descender).to eq(0)
+    end
+
+    it 'initializes maxima when consumed fragments are supplied directly' do
+      arranger.consumed = [{ text: 'hello', size: 28 }]
+      arranger.finalize_line
+      fragment = arranger.fragments.first
+
+      expect(arranger.max_line_height).to eq(fragment.line_height)
+      expect(arranger.max_ascender).to eq(fragment.ascender)
+      expect(arranger.max_descender).to eq(fragment.descender)
+    end
+
     it 'is the height of the maximum consumed fragment' do
       array = [
         { text: 'hello ' },
