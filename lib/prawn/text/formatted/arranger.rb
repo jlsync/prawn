@@ -126,8 +126,15 @@ module Prawn
           initialize_line
           @unconsumed = []
           array.each do |hash|
-            hash[:text].scan(/[^\n]+|\n/) do |line|
-              @unconsumed << hash.merge(text: line)
+            text = hash[:text]
+            if text.instance_of?(String) && text.encoding.ascii_compatible? &&
+                text.ascii_only? && !text.include?("\n")
+              # Wrapping mutates these strings, so retain scan's copy semantics.
+              @unconsumed << hash.merge(text: text.dup) unless text.empty?
+            else
+              text.scan(/[^\n]+|\n/) do |line|
+                @unconsumed << hash.merge(text: line)
+              end
             end
           end
         end
@@ -377,18 +384,18 @@ module Prawn
         end
 
         def line_measurement_maximums=(fragment)
-          @max_line_height = [
-            defined?(@max_line_height) && @max_line_height,
-            fragment.line_height,
-          ].compact.max
-          @max_descender = [
-            defined?(@max_descender) && @max_descender,
-            fragment.descender,
-          ].compact.max
-          @max_ascender = [
-            defined?(@max_ascender) && @max_ascender,
-            fragment.ascender,
-          ].compact.max
+          height = fragment.line_height
+          if @max_line_height.nil? || (height && height > @max_line_height)
+            @max_line_height = height
+          end
+          descender = fragment.descender
+          if @max_descender.nil? || (descender && descender > @max_descender)
+            @max_descender = descender
+          end
+          ascender = fragment.ascender
+          if @max_ascender.nil? || (ascender && ascender > @max_ascender)
+            @max_ascender = ascender
+          end
         end
       end
     end
