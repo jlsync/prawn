@@ -327,12 +327,12 @@ module Prawn
         end
 
         def format_state_without_text(hash)
-          if hash.default || hash.default_proc
+          if hash.instance_of?(Hash) && hash.default.nil? && hash.default_proc.nil?
+            hash.except(:text)
+          else
             state = hash.dup
             state.delete(:text)
             state
-          else
-            hash.except(:text)
           end
         end
 

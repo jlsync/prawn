@@ -94,7 +94,7 @@ module Prawn
       #
       # @return [Boolean]
       def dashed?
-        current_dash_state != undashed_setting
+        current_dash_state != UNDASHED_SETTING
       end
 
       private
@@ -107,7 +107,7 @@ module Prawn
       private_constant :UNDASHED_SETTING
 
       def undashed_setting
-        UNDASHED_SETTING
+        UNDASHED_SETTING.dup
       end
 
       def current_dash_state=(dash_options)

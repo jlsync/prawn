@@ -558,4 +558,29 @@ describe Prawn::Text::Formatted::Arranger do
       expect(fragment.format_state[:styles]).to eq([:bold])
     end
   end
+
+  describe 'Hash subclasses' do
+    it 'preserves custom Hash subclasses in fragment format_state and current_format_state' do
+      custom_hash_class =
+        Class.new(Hash) do
+          def [](key)
+            key == :styles ? [:italic] : super
+          end
+        end
+
+      custom_hash = custom_hash_class.new
+      custom_hash[:text] = 'hello'
+
+      arranger.format_array = [custom_hash]
+      arranger.next_string
+
+      expect(arranger.current_format_state).to be_a(custom_hash_class)
+      expect(arranger.current_format_state[:styles]).to eq([:italic])
+
+      arranger.finalize_line
+      fragment = arranger.fragments.first
+      expect(fragment.format_state).to be_a(custom_hash_class)
+      expect(fragment.format_state[:styles]).to eq([:italic])
+    end
+  end
 end
