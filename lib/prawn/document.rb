@@ -841,9 +841,13 @@ module Prawn
 
       # Treat :margin as CSS shorthand with 1-4 values.
       positions = MARGIN_POSITIONS[margin.length]
+      if positions.nil?
+        raise ArgumentError,
+          "Margin array has too many values (expected 0 to 4, got #{margin.length})"
+      end
 
       MARGIN_SIDES.each_with_index do |side, i|
-        pos = positions[i] if positions
+        pos = positions[i]
         new_margin = options[MARGIN_SIDE_KEYS[side]] || (margin[pos] if pos)
         state.page.margins[side] = new_margin if new_margin
       end

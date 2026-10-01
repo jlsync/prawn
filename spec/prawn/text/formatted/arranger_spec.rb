@@ -542,4 +542,20 @@ describe Prawn::Text::Formatted::Arranger do
       )
     end
   end
+
+  describe 'hashes with default value or default proc' do
+    it 'preserves default values in fragment format_state and current_format_state' do
+      hash_with_default = Hash.new { |_h, k| [:bold] if k == :styles }
+      hash_with_default[:text] = 'hello'
+
+      arranger.format_array = [hash_with_default]
+      arranger.next_string
+
+      expect(arranger.current_format_state[:styles]).to eq([:bold])
+
+      arranger.finalize_line
+      fragment = arranger.fragments.first
+      expect(fragment.format_state[:styles]).to eq([:bold])
+    end
+  end
 end

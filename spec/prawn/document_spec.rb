@@ -162,6 +162,13 @@ describe Prawn::Document do
       doc.start_new_page(top_margin: 42)
       expect(doc.page.margins[:top]).to eq(42)
     end
+
+    it 'raises an ArgumentError when margin array has more than 4 values' do
+      doc = described_class.new
+      expect {
+        doc.start_new_page(margin: [10, 20, 30, 40, 50])
+      }.to raise_error(ArgumentError, /too many values/)
+    end
   end
 
   describe '#delete_page(index)' do

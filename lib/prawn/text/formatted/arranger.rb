@@ -110,7 +110,7 @@ module Prawn
           @fragments = []
           @consumed.each do |hash|
             text = hash[:text]
-            format_state = hash.except(:text)
+            format_state = format_state_without_text(hash)
             fragment = Prawn::Text::Formatted::Fragment.new(
               text,
               format_state,
@@ -176,7 +176,7 @@ module Prawn
 
           if next_unconsumed_hash
             @consumed << next_unconsumed_hash.dup
-            @current_format_state = next_unconsumed_hash.except(:text)
+            @current_format_state = format_state_without_text(next_unconsumed_hash)
 
             next_unconsumed_hash[:text]
           end
@@ -322,8 +322,18 @@ module Prawn
             if @consumed.empty?
               {}
             else
-              @consumed.last.except(:text)
+              format_state_without_text(@consumed.last)
             end
+        end
+
+        def format_state_without_text(hash)
+          if hash.default || hash.default_proc
+            state = hash.dup
+            state.delete(:text)
+            state
+          else
+            hash.except(:text)
+          end
         end
 
         def apply_font_size(size, styles, &block)
