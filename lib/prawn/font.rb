@@ -147,7 +147,7 @@ module Prawn
     # @option options :kerning [Boolean] (false)
     # @option options :style [Symbol]
     # @return [Number]
-    def width_of(string, options = DEFAULT_OPTS)
+    def width_of(string, options = {})
       if options.key?(:inline_format)
         p = options[:inline_format]
         p = [] unless p.is_a?(Array)

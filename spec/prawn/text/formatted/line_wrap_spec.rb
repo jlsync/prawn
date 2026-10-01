@@ -489,4 +489,25 @@ describe Prawn::Text::Formatted::LineWrap do
       expect(line_wrap.paragraph_finished?).to be true
     end
   end
+
+  describe 'when width_of options are mutated by extensions' do
+    it 'passes mutable options without raising FrozenError' do
+      extension_pdf = create_pdf
+      extension_pdf.define_singleton_method(:width_of) do |string, options = {}|
+        options[:custom_extension_metric] = true
+        super(string, options)
+      end
+
+      custom_arranger = Prawn::Text::Formatted::Arranger.new(extension_pdf)
+      custom_arranger.format_array = [{ text: 'testing extension width_of mutation' }]
+
+      expect {
+        line_wrap.wrap_line(
+          arranger: custom_arranger,
+          width: 200,
+          document: extension_pdf,
+        )
+      }.to_not raise_error
+    end
+  end
 end
