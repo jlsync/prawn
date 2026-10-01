@@ -718,6 +718,14 @@ describe Prawn::Text::Formatted::Parser do
       exp = %(&amp;gt; &lt; gt; hello &amp;lt &gt; &amp;lt; world &amp;amp &amp; &amp;amp; " ' \n &amp;nbsp;)
       expect(value).to eq(exp)
     end
+
+    it 'returns a new mutable duplicate when nothing needs to be escaped' do
+      string = 'plain text without entities'
+      escaped = described_class.escape(string)
+      expect(escaped).to eq(string)
+      expect(escaped).to_not(be(string))
+      expect(escaped).to_not(be_frozen)
+    end
   end
 
   describe '#unescape' do
@@ -725,6 +733,14 @@ describe Prawn::Text::Formatted::Parser do
       string = "&gt; < gt; hello &lt > &lt; world &amp & &amp; \" ' \n &nbsp;"
       value = described_class.unescape(string)
       expect(value).to eq("> < gt; hello &lt > < world &amp & & \" ' \n &nbsp;")
+    end
+
+    it 'returns a new mutable duplicate when nothing needs to be unescaped' do
+      string = 'plain text without entities'
+      unescaped = described_class.unescape(string)
+      expect(unescaped).to eq(string)
+      expect(unescaped).to_not(be(string))
+      expect(unescaped).to_not(be_frozen)
     end
   end
 end

@@ -69,7 +69,11 @@ module Prawn
       # @param image_blob [String]
       # @return [Boolean]
       def self.can_render?(image_blob)
-        image_blob.start_with?(PNG_MAGIC)
+        if image_blob.encoding == ::Encoding::BINARY
+          image_blob.start_with?(PNG_MAGIC)
+        else
+          image_blob.byteslice(0, 8)&.b == PNG_MAGIC
+        end
       end
 
       # Process a new PNG image

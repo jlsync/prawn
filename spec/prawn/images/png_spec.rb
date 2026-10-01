@@ -276,4 +276,21 @@ describe Prawn::Images::PNG do
       expect(png.alpha_channel).to eq(data)
     end
   end
+
+  describe '.can_render?' do
+    let(:dice_png) { File.binread("#{Prawn::DATADIR}/images/dice.png") }
+
+    it 'returns true for binary PNG data' do
+      expect(described_class.can_render?(dice_png)).to be(true)
+    end
+
+    it 'returns true for PNG data tagged with UTF-8 encoding' do
+      utf8_data = dice_png.dup.force_encoding(Encoding::UTF_8)
+      expect(described_class.can_render?(utf8_data)).to be(true)
+    end
+
+    it 'returns false for non-PNG data' do
+      expect(described_class.can_render?('not a png')).to be(false)
+    end
+  end
 end

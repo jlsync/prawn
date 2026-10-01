@@ -280,7 +280,7 @@ module Prawn
         # @param text [String]
         # @return [String]
         def self.escape(text)
-          return text unless text.match?(/[&><]/)
+          return text.dup unless text.match?(/[&><]/)
 
           text.gsub(ESCAPE_REGEXP, ESCAPE_CHARS)
         end
@@ -290,7 +290,7 @@ module Prawn
         # @param text [String]
         # @return [String]
         def self.unescape(text)
-          return text unless text.include?('&')
+          return text.dup unless text.include?('&')
 
           text.gsub(UNESCAPE_REGEXP, UNESCAPE_CHARS)
         end
