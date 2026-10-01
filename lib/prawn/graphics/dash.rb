@@ -103,8 +103,11 @@ module Prawn
         renderer.add_content(dash_setting)
       end
 
+      UNDASHED_SETTING = { dash: nil, space: nil, phase: 0 }.freeze
+      private_constant :UNDASHED_SETTING
+
       def undashed_setting
-        { dash: nil, space: nil, phase: 0 }
+        UNDASHED_SETTING
       end
 
       def current_dash_state=(dash_options)

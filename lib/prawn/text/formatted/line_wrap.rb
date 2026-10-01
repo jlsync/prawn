@@ -7,6 +7,9 @@ module Prawn
       #
       # @private
       class LineWrap
+        KERNING_TRUE = { kerning: true }.freeze
+        KERNING_FALSE = { kerning: false }.freeze
+
         # Patterns and characters below depend only on the text encoding, so
         # they are cached per class rather than per instance: a new LineWrap
         # is created for every text box.
@@ -119,7 +122,7 @@ module Prawn
                 if segment == zero_width_space_cached(segment.encoding)
                   0
                 else
-                  @document.width_of(segment, kerning: @kerning)
+                  @document.width_of(segment, @kerning_options)
                 end
 
               if @accumulated_width + segment_width <= @width
@@ -261,7 +264,7 @@ module Prawn
             return w
           end
 
-          w = @document.width_of(shy_char, kerning: @kerning)
+          w = @document.width_of(shy_char, @kerning_options)
           @soft_hyphen_width_cache[key] = w
           w
         end
@@ -273,6 +276,7 @@ module Prawn
         def initialize_line(options)
           @document = options[:document]
           @kerning = options[:kerning]
+          @kerning_options = @kerning ? KERNING_TRUE : KERNING_FALSE
           @width = options[:width]
 
           @disable_wrap_by_char = options[:disable_wrap_by_char]

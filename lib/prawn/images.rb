@@ -134,7 +134,7 @@ module Prawn
         return io.read
       end
       # String or Pathname
-      io_or_path = Pathname.new(io_or_path)
+      io_or_path = Pathname.new(io_or_path) unless io_or_path.is_a?(Pathname)
       raise ArgumentError, "#{io_or_path} not found" unless io_or_path.file?
 
       io_or_path.binread

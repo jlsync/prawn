@@ -333,7 +333,10 @@ module Prawn
       end
 
       def unscaled_width_of(string)
-        string.bytes.sum { |r| @glyph_table[r] }
+        total = 0
+        glyph_table = @glyph_table
+        string.each_byte { |r| total += glyph_table[r] }
+        total
       end
     end
   end

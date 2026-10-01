@@ -61,12 +61,15 @@ module Prawn
       # @return [Number]
       attr_accessor :scaled_height
 
+      PNG_MAGIC = "\x89PNG\r\n\x1a\n".b.freeze
+      private_constant :PNG_MAGIC
+
       # Can this image handler process this image?
       #
       # @param image_blob [String]
       # @return [Boolean]
       def self.can_render?(image_blob)
-        image_blob[0, 8].unpack('C*') == [137, 80, 78, 71, 13, 10, 26, 10]
+        image_blob.start_with?(PNG_MAGIC)
       end
 
       # Process a new PNG image
@@ -321,11 +324,11 @@ module Prawn
         data = StringIO.new(@img_data)
         data.binmode
 
-        color_data = [0x00].pack('C') * ((pixels * color_bytes) + scanlines)
+        color_data = "\0".b * ((pixels * color_bytes) + scanlines)
         color = StringIO.new(color_data)
         color.binmode
 
-        @alpha_channel = [0x00].pack('C') * ((pixels * alpha_bytes) + scanlines)
+        @alpha_channel = "\0".b * ((pixels * alpha_bytes) + scanlines)
         alpha = StringIO.new(@alpha_channel)
         alpha.binmode
 
@@ -359,7 +362,7 @@ module Prawn
         data = StringIO.new(@img_data)
         data.binmode
 
-        @alpha_channel = [0x00].pack('C') * (pixels + scanlines)
+        @alpha_channel = "\0".b * (pixels + scanlines)
         alpha = StringIO.new(@alpha_channel)
         alpha.binmode
 

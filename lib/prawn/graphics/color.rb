@@ -99,10 +99,7 @@ module Prawn
       # @param hex [String] must be 6-digits long.
       # @return [Array(Integer, Integer, Integer)]
       def hex2rgb(hex)
-        r = hex[0..1]
-        g = hex[2..3]
-        b = hex[4..5]
-        [r, g, b].map { |e| e.to_i(16) }
+        [hex[0, 2].to_i(16), hex[2, 2].to_i(16), hex[4, 2].to_i(16)]
       end
 
       COLOR_SPACES = %i[DeviceRGB DeviceCMYK Pattern].freeze

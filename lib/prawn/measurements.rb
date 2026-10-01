@@ -85,12 +85,15 @@ module Prawn
       in2pt(yd2in(yd))
     end
 
+    PT_PER_MM = 72.0 / 25.4
+    MM_PER_PT = 25.4 / 72.0
+
     # Convert millimeters to points.
     #
     # @param mm [Number]
     # @return [Number]
     def mm2pt(mm)
-      mm * (72 / 25.4)
+      mm * PT_PER_MM
     end
 
     # Convert centimeters to points.
@@ -122,7 +125,7 @@ module Prawn
     # @param pt [Number]
     # @return [Number]
     def pt2mm(pt)
-      pt * 1 / mm2pt(1) # (25.4 / 72)
+      pt * MM_PER_PT
     end
   end
 end

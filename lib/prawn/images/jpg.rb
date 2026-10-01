@@ -44,12 +44,15 @@ module Prawn
         0xCF,
       ].freeze
 
+      JPEG_MAGIC = "\xFF\xD8\xFF".b.freeze
+      private_constant :JPEG_MAGIC
+
       # Can this image handler process this image?
       #
       # @param image_blob [String]
       # @return [Boolean]
       def self.can_render?(image_blob)
-        image_blob[0, 3].unpack('C*') == [255, 216, 255]
+        image_blob.start_with?(JPEG_MAGIC)
       end
 
       # Process a new JPG image.

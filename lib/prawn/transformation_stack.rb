@@ -19,7 +19,9 @@ module Prawn
     # @return [void]
     def add_to_transformation_stack(a, b, c, d, e, f)
       @transformation_stack ||= [[]]
-      @transformation_stack.last.push([a, b, c, d, e, f].map { |i| Float(i) })
+      @transformation_stack.last.push(
+        [Float(a), Float(b), Float(c), Float(d), Float(e), Float(f)],
+      )
     end
 
     # Save transformation stack.
@@ -48,15 +50,29 @@ module Prawn
     def current_transformation_matrix_with_translation(x = 0, y = 0)
       transformations = (@transformation_stack || [[]]).last
 
-      matrix = Matrix.identity(3)
+      ma = 1.0
+      mb = 0.0
+      mc = 0.0
+      md = 1.0
+      me = 0.0
+      mf = 0.0
 
       transformations.each do |a, b, c, d, e, f|
-        matrix *= Matrix[[a, c, e], [b, d, f], [0, 0, 1]]
+        new_ma = (ma * a) + (mc * b)
+        new_mb = (mb * a) + (md * b)
+        new_mc = (ma * c) + (mc * d)
+        new_md = (mb * c) + (md * d)
+        new_me = (ma * e) + (mc * f) + me
+        new_mf = (mb * e) + (md * f) + mf
+        ma = new_ma
+        mb = new_mb
+        mc = new_mc
+        md = new_md
+        me = new_me
+        mf = new_mf
       end
 
-      matrix *= Matrix[[1, 0, x], [0, 1, y], [0, 0, 1]]
-
-      matrix.to_a[0..1].transpose.flatten
+      [ma, mb, mc, md, (ma * x) + (mc * y) + me, (mb * x) + (md * y) + mf]
     end
     # rubocop: enable Metrics/ParameterLists, Naming/MethodParameterName
   end
