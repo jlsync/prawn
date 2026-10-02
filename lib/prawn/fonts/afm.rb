@@ -118,9 +118,12 @@ module Prawn
         scale = (options[:size] || size) / 1000.0
 
         if options[:kerning]
-          strings, numbers = kern(string).partition { |e| e.is_a?(String) }
-          total_kerning_offset = numbers.sum
-          (unscaled_width_of(strings.join) - total_kerning_offset) * scale
+          # The total width is the sum of the individual glyph widths plus the
+          # sum of the kerning adjustments. Summing the adjustments directly
+          # avoids building, packing and joining the kerned chunk array that
+          # #kern produces, which is only needed when encoding text for the
+          # content stream. The arithmetic is identical.
+          (unscaled_width_of(string) + kern_offset(string)) * scale
         else
           unscaled_width_of(string) * scale
         end
@@ -330,6 +333,31 @@ module Prawn
             e
           end
         end
+      end
+
+      # Sum of the kerning adjustments for every adjacent byte pair in
+      # `string`.
+      #
+      # This is the same total as summing the negative values returned by
+      # {#kern}, but without allocating the intervening chunk array. It exists
+      # so that {#compute_width_of} does not pay for kerned text encoding it
+      # immediately discards.
+      #
+      # @param string [String] *must* be encoded as WinAnsi
+      # @return [Integer]
+      def kern_offset(string)
+        total = 0
+        kern_pair_index = @kern_pair_index
+        last_byte = nil
+
+        string.each_byte do |byte|
+          if last_byte && (k = kern_pair_index[(last_byte << 8) | byte])
+            total += k
+          end
+          last_byte = byte
+        end
+
+        total
       end
 
       def unscaled_width_of(string)

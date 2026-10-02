@@ -112,11 +112,19 @@ module Prawn
             @newline_encountered = true
             false
           else
+            # Every segment yielded by the scan shares the fragment's encoding,
+            # so the pattern and the single-character sentinels are resolved
+            # once per fragment rather than once per token.
+            encoding = fragment.encoding
+            pattern = scan_pattern(encoding)
+            zero_width_space = zero_width_space_cached(encoding)
+            soft_hyphen = soft_hyphen_cached(encoding)
+
             # Scan lazily: only the tokens that fit on this line are needed, so
             # avoid tokenizing the (possibly long) remainder of the fragment.
-            fragment.scan(scan_pattern(fragment.encoding)) do |segment|
+            fragment.scan(pattern) do |segment|
               segment_width =
-                if segment == zero_width_space_cached(segment.encoding)
+                if segment == zero_width_space
                   0
                 else
                   @document.width_of(segment, kerning: @kerning)
@@ -124,9 +132,10 @@ module Prawn
 
               if @accumulated_width + segment_width <= @width
                 @accumulated_width += segment_width
-                shy = soft_hyphen_cached(segment.encoding)
-                if segment[-1] == shy
-                  @accumulated_width -= soft_hyphen_width_cached(shy)
+                # #end_with? is equivalent to comparing the last character here
+                # but does not allocate a one-character string per token.
+                if soft_hyphen && segment.end_with?(soft_hyphen)
+                  @accumulated_width -= soft_hyphen_width_cached(soft_hyphen)
                 end
                 @fragment_output << segment
               else
