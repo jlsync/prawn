@@ -30,5 +30,20 @@ describe Prawn::Measurements do
       expect(pt2mm(rational)).to eq(rational / (72.0 / 25.4))
       expect(pt2mm(rational)).to_not eq(rational * (25.4 / 72.0))
     end
+
+    it 'respects overridden mm2pt behavior' do
+      mod = described_class
+      custom_class =
+        Class.new do
+          include mod
+
+          def mm2pt(millimeters)
+            millimeters * 10
+          end
+        end
+
+      instance = custom_class.new
+      expect(instance.pt2mm(20)).to eq(2)
+    end
   end
 end
