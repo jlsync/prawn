@@ -873,4 +873,23 @@ describe Prawn::Text::Formatted::Box do
       )
     end
   end
+
+  describe 'Text::Formatted::Box#render with :draw_text_callback' do
+    it 'reports text the callback mutated in place' do
+      # The printed line is assembled from the fragment strings *after* the
+      # draw callbacks run, so an in-place mutation is visible in #text. An
+      # explicit :direction is what keeps Fragment#default_direction= from
+      # replacing @text with a fresh string, making the callback alias the
+      # string that gets assembled.
+      text_box = described_class.new(
+        [{ text: 'hello world', direction: :ltr }],
+        document: pdf,
+        width: 500,
+        draw_text_callback: ->(text, _options) { text.upcase! },
+      )
+      text_box.render
+
+      expect(text_box.text).to eq('HELLO WORLD')
+    end
+  end
 end
