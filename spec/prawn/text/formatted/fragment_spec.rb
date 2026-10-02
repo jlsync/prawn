@@ -159,6 +159,19 @@ describe Prawn::Text::Formatted::Fragment do
       fragment = described_class.new('hello world ', format_state, pdf)
       expect(fragment.text).to eq('hello world')
     end
+
+    it 'returns a distinct mutable string even when constructed from frozen text without ZWSP' do
+      input_text = 'hello world'
+      expect(input_text).to be_frozen
+
+      fragment = described_class.new(input_text, {}, pdf)
+      expect(fragment.text).to eq('hello world')
+      expect(fragment.text).to_not be_frozen
+      expect(fragment.text.equal?(input_text)).to be(false)
+
+      fragment.text.upcase!
+      expect(input_text).to eq('hello world')
+    end
   end
 
   describe '#word_spacing=' do

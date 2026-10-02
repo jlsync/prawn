@@ -363,8 +363,12 @@ module Prawn
         end
 
         def strip_zero_width_spaces(string)
-          if string.encoding == ::Encoding::UTF_8 && string.include?(Prawn::Text::ZWSP)
-            string.gsub(Prawn::Text::ZWSP, '')
+          if string.encoding == ::Encoding::UTF_8
+            if string.include?(Prawn::Text::ZWSP)
+              string.gsub(Prawn::Text::ZWSP, '')
+            else
+              string.dup
+            end
           else
             string
           end
