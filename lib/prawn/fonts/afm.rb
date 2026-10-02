@@ -143,6 +143,15 @@ module Prawn
       # @param text [String]
       # @return [String]
       def normalize_encoding(text)
+        # ASCII-only UTF-8 and strings that already use the target encoding
+        # need no conversion, and #encode would allocate an identical copy for
+        # them anyway. #dup keeps the "returns a new string" contract.
+        if text.encoding == ::Encoding::UTF_8
+          return text.dup.force_encoding(::Encoding::Windows_1252) if text.ascii_only?
+        elsif text.encoding == ::Encoding::Windows_1252
+          return text.dup
+        end
+
         text.encode('windows-1252')
       rescue ::Encoding::InvalidByteSequenceError,
              ::Encoding::UndefinedConversionError

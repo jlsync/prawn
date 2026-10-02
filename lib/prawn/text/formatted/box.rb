@@ -20,6 +20,26 @@ module Prawn
       class Box
         include Prawn::Text::Formatted::Wrap
 
+        # Options accepted by a formatted text box in addition to the ones
+        # {PDF::Core::Text::VALID_OPTIONS} defines. Hoisted so that the literal
+        # is not rebuilt for every box; {#valid_options} still returns a fresh,
+        # mutable array.
+        BOX_VALID_OPTIONS = %i[
+          at
+          height width
+          align valign
+          rotate rotate_around
+          overflow min_font_size
+          disable_wrap_by_char
+          leading character_spacing
+          mode single_line
+          document
+          direction
+          fallback_fonts
+          draw_text_callback
+        ].freeze
+        private_constant :BOX_VALID_OPTIONS
+
         # @group Experimental API
 
         # The text that was successfully printed (or, if `:dry_run` was
@@ -400,20 +420,7 @@ module Prawn
 
         # @private
         def valid_options
-          PDF::Core::Text::VALID_OPTIONS + %i[
-            at
-            height width
-            align valign
-            rotate rotate_around
-            overflow min_font_size
-            disable_wrap_by_char
-            leading character_spacing
-            mode single_line
-            document
-            direction
-            fallback_fonts
-            draw_text_callback
-          ]
+          PDF::Core::Text::VALID_OPTIONS + BOX_VALID_OPTIONS
         end
 
         private
@@ -538,7 +545,9 @@ module Prawn
               fragment[:font] = font unless font.nil?
               fragments << fragment
             else
-              fragment[:text] += char
+              # Append in place: falling back builds one fragment per run of
+              # glyphs sharing a font, and those runs can be long.
+              fragment[:text] << char
             end
           end
 
@@ -711,11 +720,14 @@ module Prawn
         end
 
         def draw_fragment_overlay_styles(fragment)
-          if fragment.styles.include?(:underline)
+          styles = fragment.format_state[:styles]
+          return unless styles
+
+          if styles.include?(:underline)
             @document.stroke_line(fragment.underline_points)
           end
 
-          if fragment.styles.include?(:strikethrough)
+          if styles.include?(:strikethrough)
             @document.stroke_line(fragment.strikethrough_points)
           end
         end

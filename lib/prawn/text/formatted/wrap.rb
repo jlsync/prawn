@@ -73,17 +73,24 @@ module Prawn
 
         def print_line
           @nothing_printed = false
-          printed_fragments = []
+          # Build the printed line as we go: the fragments were previously
+          # collected into an array only to be concatenated again below.
+          out = +''
           fragments_this_line = []
 
           word_spacing = word_spacing_for_this_line
           @arranger.fragments.each do |fragment|
             fragment.word_spacing = word_spacing
             if fragment.text == "\n"
-              printed_fragments << "\n" if @printed_lines.last == ''
+              out << "\n" if @printed_lines.last == ''
               break
             end
-            printed_fragments << fragment.text
+            text = fragment.text
+            out << if text.encoding == ::Encoding::UTF_8
+                     text
+                   else
+                     text.dup.force_encoding(::Encoding::UTF_8)
+                   end
             fragments_this_line << fragment
           end
           @arranger.fragments.replace([])
@@ -101,10 +108,6 @@ module Prawn
             accumulated_width += fragment_this_line.width
           end
 
-          out = +''
-          printed_fragments.each do |s|
-            out << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
-          end
           @printed_lines << out
         end
 
