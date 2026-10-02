@@ -49,13 +49,14 @@ module Prawn
     # @return [Array(Number, Number, Number, Number, Number, Number)]
     def current_transformation_matrix_with_translation(x = 0, y = 0)
       transformations = (@transformation_stack || [[]]).last
+      return [1, 0, 0, 1, x, y] if transformations.nil? || transformations.empty?
 
-      ma = 1.0
-      mb = 0.0
-      mc = 0.0
-      md = 1.0
-      me = 0.0
-      mf = 0.0
+      ma = 1
+      mb = 0
+      mc = 0
+      md = 1
+      me = 0
+      mf = 0
 
       transformations.each do |a, b, c, d, e, f|
         new_ma = (ma * a) + (mc * b)
