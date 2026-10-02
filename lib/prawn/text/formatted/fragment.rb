@@ -8,9 +8,6 @@ module Prawn
       #
       # @private
       class Fragment
-        EMPTY_ARRAY = [].freeze
-        private_constant :EMPTY_ARRAY
-
         attr_reader :format_state
         attr_reader :text
         attr_writer :width
@@ -116,7 +113,7 @@ module Prawn
         #
         # @return [Array<Symbol>]
         def styles
-          @format_state[:styles] || EMPTY_ARRAY
+          @format_state[:styles] || []
         end
 
         # Fragment link.
@@ -208,7 +205,7 @@ module Prawn
         def callback_objects
           callback = @format_state[:callback]
           if callback.nil?
-            EMPTY_ARRAY
+            []
           elsif callback.is_a?(Array)
             callback
           else
@@ -356,11 +353,11 @@ module Prawn
         end
 
         def process_soft_hyphens(string)
-          return string unless string.include?(normalized_soft_hyphen)
-
           if string.encoding != normalized_soft_hyphen.encoding
             string.force_encoding(normalized_soft_hyphen.encoding)
           end
+
+          return string unless string.include?(normalized_soft_hyphen)
 
           string.gsub(normalized_soft_hyphen, '')
         end
