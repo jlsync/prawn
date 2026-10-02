@@ -54,7 +54,9 @@ jobs:
       - name: Setup deps
         if: ${{ matrix.dependencies == 'edge' }}
         run: |
-          echo "gem 'prawn-dev', github: 'prawnpdf/prawn-dev'" >> Gemfile.local
+          # prawn-dev is deliberately not overridden here. It is consumed from
+          # the jlsync fork at ~> 0.7.0, while upstream prawn-dev is still 0.6.0
+          # and declaring it twice makes Bundler abort.
           echo "gem 'prawn-manual_builder', github: 'prawnpdf/prawn-manual_builder'" >> Gemfile.local
       - name: Gems cache
         uses: actions/cache@v4

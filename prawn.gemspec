@@ -53,6 +53,6 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency('pdf-inspector', '~> 1.3')
   spec.add_development_dependency('pdf-reader', '~> 2.16')
-  spec.add_development_dependency('prawn-dev', '~> 0.6.0')
+  spec.add_development_dependency('prawn-dev', '~> 0.7.0')
   spec.add_development_dependency('prawn-manual_builder', '~> 0.5.0')
 end
