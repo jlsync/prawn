@@ -322,66 +322,89 @@ module Prawn
         color_bytes = colors * bits / 8
 
         scanline_length = ((color_bytes + alpha_bytes) * width) + 1
-        scanlines = @img_data.bytesize / scanline_length
+        source = @img_data
+        scanlines = source.bytesize / scanline_length
         pixels = width * height
 
-        data = StringIO.new(@img_data)
-        data.binmode
+        color_size = (pixels * color_bytes) + scanlines
+        alpha_size = (pixels * alpha_bytes) + scanlines
+        # Build the channels by appending, rather than pre-sizing zero-filled
+        # buffers and copying each pixel through a StringIO. The buffers are
+        # zero padded below if the data runs short, matching the old output.
+        color_data = String.new(capacity: color_size, encoding: ::Encoding::BINARY)
+        alpha_data = String.new(capacity: alpha_size, encoding: ::Encoding::BINARY)
 
-        color_data = "\0".b * ((pixels * color_bytes) + scanlines)
-        color = StringIO.new(color_data)
-        color.binmode
-
-        @alpha_channel = "\0".b * ((pixels * alpha_bytes) + scanlines)
-        alpha = StringIO.new(@alpha_channel)
-        alpha.binmode
-
-        scanlines.times do |line|
-          data.seek(line * scanline_length)
-
-          filter = data.getbyte
-
-          color.putc(filter)
-          alpha.putc(filter)
+        position = 0
+        scanlines.times do
+          filter = source.getbyte(position)
+          position += 1
+          color_data << filter
+          alpha_data << filter
 
           width.times do
-            color.write(data.read(color_bytes))
-            alpha.write(data.read(alpha_bytes))
+            color_data <<
+              if color_bytes == 1
+                source.getbyte(position)
+              else
+                source.byteslice(position, color_bytes)
+              end
+            position += color_bytes
+
+            alpha_data <<
+              if alpha_bytes == 1
+                source.getbyte(position)
+              else
+                source.byteslice(position, alpha_bytes)
+              end
+            position += alpha_bytes
           end
+        end
+
+        if color_data.bytesize < color_size
+          color_data << ("\0".b * (color_size - color_data.bytesize))
+        end
+        if alpha_data.bytesize < alpha_size
+          alpha_data << ("\0".b * (alpha_size - alpha_data.bytesize))
         end
 
         @img_data = color_data
+        @alpha_channel = alpha_data
       end
 
       def generate_alpha_channel
-        alpha_palette = Hash.new(0xff)
-        0.upto(palette.bytesize / 3) do |n|
+        # An Array default is a cheaper lookup than a Hash default at one
+        # lookup per pixel. Size 256 keeps the 0xff default for every possible
+        # palette index even when tRNS is partial.
+        alpha_palette = Array.new(256, 0xff)
+        palette_entries = palette.bytesize / 3
+        0.upto(palette_entries) do |n|
           alpha_palette[n] = @transparency[:palette][n] || 0xff
         end
 
+        source = @img_data
         scanline_length = width + 1
-        scanlines = @img_data.bytesize / scanline_length
+        scanlines = source.bytesize / scanline_length
         pixels = width * height
 
-        data = StringIO.new(@img_data)
-        data.binmode
+        alpha_size = pixels + scanlines
+        alpha_data = String.new(capacity: alpha_size, encoding: ::Encoding::BINARY)
 
-        @alpha_channel = "\0".b * (pixels + scanlines)
-        alpha = StringIO.new(@alpha_channel)
-        alpha.binmode
-
-        scanlines.times do |line|
-          data.seek(line * scanline_length)
-
-          filter = data.getbyte
-
-          alpha.putc(filter)
+        position = 0
+        scanlines.times do
+          alpha_data << source.getbyte(position)
+          position += 1
 
           width.times do
-            color = data.read(1).unpack1('C')
-            alpha.putc(alpha_palette[color])
+            alpha_data << alpha_palette[source.getbyte(position)]
+            position += 1
           end
         end
+
+        if alpha_data.bytesize < alpha_size
+          alpha_data << ("\0".b * (alpha_size - alpha_data.bytesize))
+        end
+
+        @alpha_channel = alpha_data
       end
     end
 
