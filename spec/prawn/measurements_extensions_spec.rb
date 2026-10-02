@@ -21,4 +21,14 @@ describe Prawn::Measurements do
       expect(1.pt).to eq(1)
     end
   end
+
+  describe '#pt2mm' do
+    include described_class
+
+    it 'preserves division semantics for Rational' do
+      rational = Rational(1, 3)
+      expect(pt2mm(rational)).to eq(rational / (72.0 / 25.4))
+      expect(pt2mm(rational)).to_not eq(rational * (25.4 / 72.0))
+    end
+  end
 end

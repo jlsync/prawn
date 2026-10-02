@@ -125,7 +125,7 @@ module Prawn
     # @param pt [Number]
     # @return [Number]
     def pt2mm(pt)
-      pt * MM_PER_PT
+      pt / PT_PER_MM
     end
   end
 end

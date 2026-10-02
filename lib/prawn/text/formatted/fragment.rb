@@ -353,11 +353,13 @@ module Prawn
         end
 
         def process_soft_hyphens(string)
-          if string.encoding != normalized_soft_hyphen.encoding
+          if string.encoding == normalized_soft_hyphen.encoding
+            return string.dup unless string.include?(normalized_soft_hyphen)
+          else
+            string = string.dup
             string.force_encoding(normalized_soft_hyphen.encoding)
+            return string unless string.include?(normalized_soft_hyphen)
           end
-
-          return string unless string.include?(normalized_soft_hyphen)
 
           string.gsub(normalized_soft_hyphen, '')
         end
