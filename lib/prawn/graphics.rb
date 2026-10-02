@@ -471,24 +471,22 @@ module Prawn
 
         fill_circle(options[:at], 1)
 
-        (options[:step_length]..options[:width])
-          .step(options[:step_length]) do |point|
-            fill_circle([options[:at][0] + point, options[:at][1]], 1)
-            draw_text(
-              point,
-              at: [options[:at][0] + point - 5, options[:at][1] - 10],
-              size: 7,
-            )
+        (options[:step_length]..options[:width]).step(options[:step_length]) do |point|
+          fill_circle([options[:at][0] + point, options[:at][1]], 1)
+          draw_text(
+            point,
+            at: [options[:at][0] + point - 5, options[:at][1] - 10],
+            size: 7,
+          )
         end
 
-        (options[:step_length]..options[:height])
-          .step(options[:step_length]) do |point|
-            fill_circle([options[:at][0], options[:at][1] + point], 1)
-            draw_text(
-              point,
-              at: [options[:at][0] - 17, options[:at][1] + point - 2],
-              size: 7,
-            )
+        (options[:step_length]..options[:height]).step(options[:step_length]) do |point|
+          fill_circle([options[:at][0], options[:at][1] + point], 1)
+          draw_text(
+            point,
+            at: [options[:at][0] - 17, options[:at][1] + point - 2],
+            size: 7,
+          )
         end
       end
     end
