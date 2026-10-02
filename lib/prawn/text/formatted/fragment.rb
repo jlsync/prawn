@@ -53,14 +53,16 @@ module Prawn
         #
         # @return [Boolean]
         def subscript?
-          styles.include?(:subscript)
+          styles = @format_state[:styles]
+          styles ? styles.include?(:subscript) : false
         end
 
         # Is this a superscript fragment?
         #
         # @return [Boolean]
         def superscript?
-          styles.include?(:superscript)
+          styles = @format_state[:styles]
+          styles ? styles.include?(:superscript) : false
         end
 
         # Vertical offset of the fragment.

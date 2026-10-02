@@ -134,13 +134,16 @@ module Prawn
         #
         # @return [Array<Array(FULL_FONT, String)>]
         def encode(characters)
+          # Pack the whole run at once rather than building a one-element Array
+          # and a String per glyph. 'n*' applies the same 16-bit truncation as
+          # 'n' to each element.
           [
             [
               FULL_FONT,
               characters.map { |c|
                 check_bounds!(c)
-                [cmap[c]].pack('n')
-              }.join,
+                cmap[c]
+              }.pack('n*'),
             ],
           ]
         end
@@ -356,6 +359,11 @@ module Prawn
       # @param text [String]
       # @return [String]
       def normalize_encoding(text)
+        # Encoding a string to the encoding it already has produces a copy
+        # without validating it, so #dup is equivalent and avoids the
+        # transcoding machinery.
+        return text.dup if text.encoding == ::Encoding::UTF_8
+
         text.encode(::Encoding::UTF_8)
       rescue StandardError
         raise Prawn::Errors::IncompatibleStringEncoding,
@@ -448,13 +456,19 @@ module Prawn
       end
 
       def character_width_by_code(code)
-        return 0 unless cmap[code]
+        # Widths are memoized, so check the memo before the comparatively
+        # expensive cmap lookup.
+        width = @char_widths[code]
+        return width if width
+
+        glyph = cmap[code]
+        return 0 unless glyph
 
         # Some TTF fonts have nonzero widths for \n (UTF-8 / ASCII code: 10).
         # Patch around this as we'll never be drawing a newline with a width.
         return 0.0 if code == 10
 
-        @char_widths[code] ||= Integer(hmtx.widths[cmap[code]] * scale_factor)
+        @char_widths[code] = Integer(hmtx.widths[glyph] * scale_factor)
       end
 
       def scale_factor

@@ -291,14 +291,16 @@ module PDF
         @on_encode&.call(self)
 
         output = "#{@identifier} #{gen} obj\n"
-        if @stream.empty?
+        # Use the public reader: PDF::Core::Reference initializes its stream
+        # lazily, so the @stream ivar can legitimately be nil here.
+        if stream.empty?
           output <<
             PDF::Core.encrypted_pdf_object(data, key, @identifier, gen) << "\n"
         else
           output << PDF::Core.encrypted_pdf_object(
-            data.merge(@stream.data), key, @identifier, gen,
+            data.merge(stream.data), key, @identifier, gen,
           ) << "\n" <<
-            @stream.encrypted_object(key, @identifier, gen)
+            stream.encrypted_object(key, @identifier, gen)
         end
 
         output << "endobj\n"

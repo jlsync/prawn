@@ -790,8 +790,13 @@ describe Prawn::Graphics do
       new_state = PDF::Core::GraphicState.new(pdf.graphic_state)
 
       %i[color_space dash fill_color stroke_color].each do |attr|
-        expect(new_state.public_send(attr)).to eq(pdf.graphic_state.public_send(attr))
-        expect(new_state.public_send(attr)).to_not equal(pdf.graphic_state.public_send(attr))
+        original = pdf.graphic_state.public_send(attr)
+        copy = new_state.public_send(attr)
+        expect(copy).to eq(original)
+        # A frozen value cannot be mutated through either state, so PDF::Core
+        # may share it instead of copying it. Only mutable values must be
+        # distinct objects.
+        expect(copy).to_not equal(original) unless original.frozen?
       end
     end
 
@@ -799,8 +804,11 @@ describe Prawn::Graphics do
       new_state = pdf.graphic_state.dup
 
       %i[color_space dash fill_color stroke_color].each do |attr|
-        expect(new_state.public_send(attr)).to eq(pdf.graphic_state.public_send(attr))
-        expect(new_state.public_send(attr)).to_not equal(pdf.graphic_state.public_send(attr))
+        original = pdf.graphic_state.public_send(attr)
+        copy = new_state.public_send(attr)
+        expect(copy).to eq(original)
+        # See the note above: frozen values may be shared.
+        expect(copy).to_not equal(original) unless original.frozen?
       end
     end
 

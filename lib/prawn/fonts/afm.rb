@@ -118,9 +118,12 @@ module Prawn
         scale = (options[:size] || size) / 1000.0
 
         if options[:kerning]
-          strings, numbers = kern(string).partition { |e| e.is_a?(String) }
-          total_kerning_offset = numbers.sum
-          (unscaled_width_of(strings.join) - total_kerning_offset) * scale
+          # The total width is the sum of the individual glyph widths plus the
+          # sum of the kerning adjustments. Summing the adjustments directly
+          # avoids building, packing and joining the kerned chunk array that
+          # #kern produces, which is only needed when encoding text for the
+          # content stream. The arithmetic is identical.
+          (unscaled_width_of(string) + kern_offset(string)) * scale
         else
           unscaled_width_of(string) * scale
         end
@@ -140,6 +143,15 @@ module Prawn
       # @param text [String]
       # @return [String]
       def normalize_encoding(text)
+        # ASCII-only UTF-8 and strings that already use the target encoding
+        # need no conversion, and #encode would allocate an identical copy for
+        # them anyway. #dup keeps the "returns a new string" contract.
+        if text.encoding == ::Encoding::UTF_8
+          return text.dup.force_encoding(::Encoding::Windows_1252) if text.ascii_only?
+        elsif text.encoding == ::Encoding::Windows_1252
+          return text.dup
+        end
+
         text.encode('windows-1252')
       rescue ::Encoding::InvalidByteSequenceError,
              ::Encoding::UndefinedConversionError
@@ -309,27 +321,64 @@ module Prawn
       # String *must* be encoded as WinAnsi
       #
       def kern(string)
-        kerned = [[]]
+        kern_pair_index = @kern_pair_index
+        breaks = nil
+        last_byte = nil
+        index = -1
+
+        string.each_byte do |byte|
+          index += 1
+          k = last_byte && kern_pair_index[(last_byte << 8) | byte]
+          (breaks ||= []) << index << -k if k
+          last_byte = byte
+        end
+
+        # Concatenating the individual byte chunks reproduces the input, so
+        # slice the boundaries out of the string instead of accumulating one
+        # Array of bytes per chunk and packing it back together.
+        result = []
+        start = 0
+        if breaks
+          i = 0
+          length = breaks.length
+          while i < length
+            boundary = breaks[i]
+            result << string.byteslice(start, boundary - start)
+            result << breaks[i + 1]
+            start = boundary
+            i += 2
+          end
+        end
+        result << string.byteslice(start, string.bytesize - start)
+
+        result.map! do |e|
+          e.is_a?(String) ? e.force_encoding(::Encoding::Windows_1252) : e
+        end
+      end
+
+      # Sum of the kerning adjustments for every adjacent byte pair in
+      # `string`.
+      #
+      # This is the same total as summing the negative values returned by
+      # {#kern}, but without allocating the intervening chunk array. It exists
+      # so that {#compute_width_of} does not pay for kerned text encoding it
+      # immediately discards.
+      #
+      # @param string [String] *must* be encoded as WinAnsi
+      # @return [Integer]
+      def kern_offset(string)
+        total = 0
+        kern_pair_index = @kern_pair_index
         last_byte = nil
 
         string.each_byte do |byte|
-          k = last_byte && @kern_pair_index[(last_byte << 8) | byte]
-          if k
-            kerned << -k << [byte]
-          else
-            kerned.last << byte
+          if last_byte && (k = kern_pair_index[(last_byte << 8) | byte])
+            total += k
           end
           last_byte = byte
         end
 
-        kerned.map do |e|
-          e = e.pack('C*') if e.is_a?(Array)
-          if e.respond_to?(:force_encoding)
-            e.force_encoding(::Encoding::Windows_1252)
-          else
-            e
-          end
-        end
+        total
       end
 
       def unscaled_width_of(string)

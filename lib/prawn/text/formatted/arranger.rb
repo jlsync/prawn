@@ -228,7 +228,10 @@ module Prawn
             font = fragment.font
             size = fragment.size
             character_spacing = fragment.character_spacing
-            styles = fragment.styles
+            # Read the raw state: #font_style handles a nil styles list, and
+            # Fragment#styles would allocate an empty Array for each fragment
+            # that carries no styles.
+            styles = fragment.format_state[:styles]
           end
           font_style = font_style(styles)
 
@@ -303,6 +306,9 @@ module Prawn
         # @param styles [Array<Symbol>]
         # @return [Symbol]
         def font_style(styles)
+          # Most fragments carry no styles at all; avoid Array(nil) for them.
+          return :normal if styles.nil?
+
           styles = Array(styles)
           if styles.include?(:bold) && styles.include?(:italic)
             :bold_italic

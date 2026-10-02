@@ -112,11 +112,19 @@ module Prawn
             @newline_encountered = true
             false
           else
+            # Every segment yielded by the scan shares the fragment's encoding,
+            # so the pattern and the single-character sentinels are resolved
+            # once per fragment rather than once per token.
+            encoding = fragment.encoding
+            pattern = scan_pattern(encoding)
+            zero_width_space = zero_width_space_cached(encoding)
+            soft_hyphen = soft_hyphen_cached(encoding)
+
             # Scan lazily: only the tokens that fit on this line are needed, so
             # avoid tokenizing the (possibly long) remainder of the fragment.
-            fragment.scan(scan_pattern(fragment.encoding)) do |segment|
+            fragment.scan(pattern) do |segment|
               segment_width =
-                if segment == zero_width_space_cached(segment.encoding)
+                if segment == zero_width_space
                   0
                 else
                   @document.width_of(segment, kerning: @kerning)
@@ -124,9 +132,10 @@ module Prawn
 
               if @accumulated_width + segment_width <= @width
                 @accumulated_width += segment_width
-                shy = soft_hyphen_cached(segment.encoding)
-                if segment[-1] == shy
-                  @accumulated_width -= soft_hyphen_width_cached(shy)
+                # #end_with? is equivalent to comparing the last character here
+                # but does not allocate a one-character string per token.
+                if soft_hyphen && segment.end_with?(soft_hyphen)
+                  @accumulated_width -= soft_hyphen_width_cached(soft_hyphen)
                 end
                 @fragment_output << segment
               else
@@ -325,25 +334,29 @@ module Prawn
               @line_contains_more_than_one_word &&
               !(previous_fragment_ended_with_breakable? ||
                 fragment_begins_with_breakable?(current_fragment))
-            @fragment_output = @previous_fragment_output_without_last_word
+            @fragment_output = previous_fragment_output_without_last_word
             update_output_based_on_last_fragment(@previous_fragment)
           end
         end
 
+        # Only the previous fragment text is remembered here. The two derived
+        # values below are needed solely by the rare
+        # {#pull_preceding_fragment_to_join_this_one?} branch, so they are
+        # computed lazily rather than for every fragment.
         def remember_this_fragment_for_backward_looking_ops
           @previous_fragment = @fragment_output.dup
-          pf = @previous_fragment
-          enc = pf.encoding
-          @previous_fragment_ended_with_breakable =
-            breakable_end_regex(enc).match?(pf)
-          last_word = pf.slice(last_word_regex(enc))
-          last_word_length = last_word.nil? ? 0 : last_word.length
-          @previous_fragment_output_without_last_word =
-            pf.slice(0, pf.length - last_word_length)
         end
 
         def previous_fragment_ended_with_breakable?
-          @previous_fragment_ended_with_breakable
+          previous_fragment = @previous_fragment
+          breakable_end_regex(previous_fragment.encoding).match?(previous_fragment)
+        end
+
+        def previous_fragment_output_without_last_word
+          previous_fragment = @previous_fragment
+          last_word = previous_fragment.slice(last_word_regex(previous_fragment.encoding))
+          last_word_length = last_word.nil? ? 0 : last_word.length
+          previous_fragment.slice(0, previous_fragment.length - last_word_length)
         end
 
         def fragment_begins_with_breakable?(fragment)
@@ -406,15 +419,15 @@ module Prawn
         end
 
         def char_width_cached(char)
-          @char_width_cache ||= {}
           font_id = @document.font.object_id
-          key = [font_id, @document.font_size, char]
-          if (w = @char_width_cache[key])
+          by_size = ((@char_width_cache ||= {})[font_id] ||= {})
+          cache = (by_size[@document.font_size] ||= {})
+          if (w = cache[char])
             return w
           end
 
           w = @document.width_of(char)
-          @char_width_cache[key] = w
+          cache[char] = w
           w
         end
       end

@@ -28,6 +28,11 @@ module Prawn
     include Transformation
     include Patterns
 
+    # Upper bound on the number of formatted coordinate strings remembered per
+    # document by {#real_param}.
+    REAL_PARAM_CACHE_SIZE = 1024
+    private_constant :REAL_PARAM_CACHE_SIZE
+
     # @group Stable API
 
     #######################################################################
@@ -50,7 +55,7 @@ module Prawn
     #   @return [void]
     def move_to(*point)
       x, y = map_to_absolute(point)
-      renderer.add_content("#{PDF::Core.real(x)} #{PDF::Core.real(y)} m")
+      renderer.add_content("#{real_param(x)} #{real_param(y)} m")
     end
 
     # Draws a line from the current drawing position to the specified point.
@@ -69,7 +74,7 @@ module Prawn
     #   @return [void]
     def line_to(*point)
       x, y = map_to_absolute(point)
-      renderer.add_content("#{PDF::Core.real(x)} #{PDF::Core.real(y)} l")
+      renderer.add_content("#{real_param(x)} #{real_param(y)} l")
     end
 
     # Draws a Bezier curve from the current drawing position to the
@@ -88,7 +93,7 @@ module Prawn
         'Bounding points for bezier curve must be specified as :bounds => [[x1,y1],[x2,y2]]',
       )
 
-      curve_points = PDF::Core.real_params(
+      curve_points = real_params(
         (options[:bounds] << dest).flat_map { |e| map_to_absolute(e) },
       )
 
@@ -107,7 +112,7 @@ module Prawn
     # @return [void]
     def rectangle(point, width, height)
       x, y = map_to_absolute(point)
-      box = PDF::Core.real_params([x, y - height, width, height])
+      box = real_params([x, y - height, width, height])
 
       renderer.add_content("#{box} re")
     end
@@ -768,6 +773,42 @@ module Prawn
     end
 
     private
+
+    # Formats a single numeric content stream parameter, remembering floating
+    # point results for values that have been formatted before. Coordinate
+    # values repeat heavily across a document (curve and ellipse control
+    # points, widths, heights, axis positions) while `PDF::Core.real` is
+    # comparatively expensive.
+    #
+    # Exact Integer values are formatted directly: `PDF::Core.real` yields
+    # "#{n}.0" for every Integer, and integer coordinates dominate content
+    # streams, so those calls never touch the cache. Other Numeric types are
+    # passed straight through and never retained.
+    #
+    # The cached string is frozen because it may be shared between callers;
+    # callers only interpolate it.
+    def real_param(num)
+      return "#{num}.0" if num.instance_of?(Integer)
+
+      unless num.instance_of?(Float)
+        return PDF::Core.real(num)
+      end
+
+      cache = (@real_param_cache ||= {})
+      converted = cache[num]
+      return converted if converted
+
+      converted = PDF::Core.real(num).freeze
+      cache[num] = converted if cache.size < REAL_PARAM_CACHE_SIZE
+      converted
+    end
+
+    # Serializes an array of numbers for a content stream, as
+    # `PDF::Core.real_params` does, but reusing {#real_param} for each entry.
+    # The joined result is a fresh string, so callers may still mutate it.
+    def real_params(array)
+      array.map { |e| real_param(e) }.join(' ')
+    end
 
     def current_line_width
       graphic_state.line_width

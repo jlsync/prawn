@@ -55,7 +55,10 @@ module Prawn
         # @param string [String]
         # @return [Array<Hash>] Text fragments.
         def self.format(string, *_args)
-          tokens = string.gsub(%r{<br\s*/?>}, "\n").scan(PARSER_REGEX)
+          # Every match of the <br> pattern contains the literal "<br", so the
+          # copy can be skipped when it cannot match.
+          text = string.include?('<br') ? string.gsub(%r{<br\s*/?>}, "\n") : string
+          tokens = text.scan(PARSER_REGEX)
           array_from_tokens(tokens)
         end
 
@@ -140,7 +143,7 @@ module Prawn
           paragraph = []
           previous_string = "\n"
           array.each do |hash|
-            hash[:text].scan(SCAN_PATTERN).each do |string|
+            hash[:text].scan(SCAN_PATTERN) do |string|
               if string == "\n"
                 if previous_string == "\n"
                   paragraph << hash.dup.merge(text: "\n")
