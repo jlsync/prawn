@@ -312,26 +312,38 @@ module Prawn
       # String *must* be encoded as WinAnsi
       #
       def kern(string)
-        kerned = [[]]
+        kern_pair_index = @kern_pair_index
+        breaks = nil
         last_byte = nil
+        index = -1
 
         string.each_byte do |byte|
-          k = last_byte && @kern_pair_index[(last_byte << 8) | byte]
-          if k
-            kerned << -k << [byte]
-          else
-            kerned.last << byte
-          end
+          index += 1
+          k = last_byte && kern_pair_index[(last_byte << 8) | byte]
+          (breaks ||= []) << index << -k if k
           last_byte = byte
         end
 
-        kerned.map do |e|
-          e = e.pack('C*') if e.is_a?(Array)
-          if e.respond_to?(:force_encoding)
-            e.force_encoding(::Encoding::Windows_1252)
-          else
-            e
+        # Concatenating the individual byte chunks reproduces the input, so
+        # slice the boundaries out of the string instead of accumulating one
+        # Array of bytes per chunk and packing it back together.
+        result = []
+        start = 0
+        if breaks
+          i = 0
+          length = breaks.length
+          while i < length
+            boundary = breaks[i]
+            result << string.byteslice(start, boundary - start)
+            result << breaks[i + 1]
+            start = boundary
+            i += 2
           end
+        end
+        result << string.byteslice(start, string.bytesize - start)
+
+        result.map! do |e|
+          e.is_a?(String) ? e.force_encoding(::Encoding::Windows_1252) : e
         end
       end
 
