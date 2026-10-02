@@ -206,7 +206,9 @@ module Prawn
             }
           units * scale
         else
-          string.codepoints.sum { |code| character_width_by_code(code) } * scale
+          total = 0
+          string.each_codepoint { |code| total += character_width_by_code(code) }
+          total * scale
         end
       end
 

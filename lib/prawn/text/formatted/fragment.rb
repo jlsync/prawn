@@ -353,8 +353,12 @@ module Prawn
         end
 
         def process_soft_hyphens(string)
-          if string.encoding != normalized_soft_hyphen.encoding
+          if string.encoding == normalized_soft_hyphen.encoding
+            return string.dup unless string.include?(normalized_soft_hyphen)
+          else
+            string = string.dup
             string.force_encoding(normalized_soft_hyphen.encoding)
+            return string unless string.include?(normalized_soft_hyphen)
           end
 
           string.gsub(normalized_soft_hyphen, '')
@@ -362,7 +366,11 @@ module Prawn
 
         def strip_zero_width_spaces(string)
           if string.encoding == ::Encoding::UTF_8
-            string.gsub(Prawn::Text::ZWSP, '')
+            if string.include?(Prawn::Text::ZWSP)
+              string.gsub(Prawn::Text::ZWSP, '')
+            else
+              string.dup
+            end
           else
             string
           end

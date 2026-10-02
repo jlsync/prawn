@@ -67,7 +67,7 @@ module Prawn
         # @raise [NotFinalized]
         def line_width
           unless finalized
-            raise raise NotFinalized.new(method: 'line_width')
+            raise NotFinalized.new(method: 'line_width')
           end
 
           @fragments.sum(&:width)
@@ -84,11 +84,16 @@ module Prawn
 
           out = +''
           @fragments.each do |fragment|
+            text = fragment.text
             piece =
-              begin
-                fragment.text.dup.encode(::Encoding::UTF_8)
-              rescue ::Encoding::InvalidByteSequenceError, ::Encoding::UndefinedConversionError
-                fragment.text.dup.force_encoding(::Encoding::UTF_8)
+              if text.encoding == ::Encoding::UTF_8
+                text
+              else
+                begin
+                  text.encode(::Encoding::UTF_8)
+                rescue ::Encoding::InvalidByteSequenceError, ::Encoding::UndefinedConversionError
+                  text.dup.force_encoding(::Encoding::UTF_8)
+                end
               end
             out << piece
           end
@@ -105,8 +110,7 @@ module Prawn
           @fragments = []
           @consumed.each do |hash|
             text = hash[:text]
-            format_state = hash.dup
-            format_state.delete(:text)
+            format_state = format_state_without_text(hash)
             fragment = Prawn::Text::Formatted::Fragment.new(
               text,
               format_state,
@@ -172,8 +176,7 @@ module Prawn
 
           if next_unconsumed_hash
             @consumed << next_unconsumed_hash.dup
-            @current_format_state = next_unconsumed_hash.dup
-            @current_format_state.delete(:text)
+            @current_format_state = format_state_without_text(next_unconsumed_hash)
 
             next_unconsumed_hash[:text]
           end
@@ -315,12 +318,21 @@ module Prawn
         private
 
         def load_previous_format_state
-          if @consumed.empty?
-            @current_format_state = {}
+          @current_format_state =
+            if @consumed.empty?
+              {}
+            else
+              format_state_without_text(@consumed.last)
+            end
+        end
+
+        def format_state_without_text(hash)
+          if hash.instance_of?(Hash) && hash.default.nil? && hash.default_proc.nil?
+            hash.except(:text)
           else
-            hash = @consumed.last
-            @current_format_state = hash.dup
-            @current_format_state.delete(:text)
+            state = hash.dup
+            state.delete(:text)
+            state
           end
         end
 

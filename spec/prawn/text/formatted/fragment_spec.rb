@@ -48,6 +48,19 @@ describe Prawn::Text::Formatted::Fragment do
         fragment = described_class.new('hello world', format_state, pdf)
         expect(fragment.styles).to eq([])
       end
+
+      it 'returns a mutable array when styles are nil' do
+        format_state = {
+          styles: nil,
+          color: nil,
+          link: nil,
+          anchor: nil,
+          font: nil,
+          size: nil,
+        }
+        fragment = described_class.new('hello world', format_state, pdf)
+        expect { fragment.styles.sort! }.to_not raise_error
+      end
     end
 
     describe '#line_height' do
@@ -145,6 +158,19 @@ describe Prawn::Text::Formatted::Fragment do
       format_state = { exclude_trailing_white_space: true }
       fragment = described_class.new('hello world ', format_state, pdf)
       expect(fragment.text).to eq('hello world')
+    end
+
+    it 'returns a distinct mutable string even when constructed from frozen text without ZWSP' do
+      input_text = 'hello world'
+      expect(input_text).to be_frozen
+
+      fragment = described_class.new(input_text, {}, pdf)
+      expect(fragment.text).to eq('hello world')
+      expect(fragment.text).to_not be_frozen
+      expect(fragment.text.equal?(input_text)).to be(false)
+
+      fragment.text.upcase!
+      expect(input_text).to eq('hello world')
     end
   end
 
@@ -281,6 +307,41 @@ describe Prawn::Text::Formatted::Fragment do
       fragment = described_class.new('hello world', format_state, pdf)
       fragment.default_direction = :ltr
       expect(fragment.direction).to eq(:rtl)
+    end
+  end
+
+  describe 'soft hyphens' do
+    it 'handles differing string and soft hyphen encodings without error' do
+      format_state = {
+        normalized_soft_hyphen: Prawn::Text::SHY.encode('UTF-8'),
+      }
+      binary_string = "hello#{Prawn::Text::SHY}world".b
+      expect {
+        described_class.new(binary_string, format_state, pdf)
+      }.to_not raise_error
+    end
+
+    it 'returns a distinct mutable string on the fast path for non-UTF-8 text without soft hyphens' do
+      iso_text = 'hello world'.encode('ISO-8859-1')
+      format_state = {
+        normalized_soft_hyphen: Prawn::Text::SHY.encode('ISO-8859-1'),
+      }
+      fragment = described_class.new(iso_text, format_state, pdf)
+      expect(fragment.text).to eq(iso_text)
+      expect(fragment.text.equal?(iso_text)).to be(false)
+
+      fragment.text.upcase!
+      expect(iso_text).to eq('hello world'.encode('ISO-8859-1'))
+    end
+
+    it 'preserves the original string encoding when encodings differ on the fast path' do
+      binary_string = 'hello world'.b
+      format_state = {
+        normalized_soft_hyphen: Prawn::Text::SHY.encode('UTF-8'),
+      }
+      fragment = described_class.new(binary_string, format_state, pdf)
+      expect(binary_string.encoding).to eq(Encoding::ASCII_8BIT)
+      expect(fragment.text.equal?(binary_string)).to be(false)
     end
   end
 end

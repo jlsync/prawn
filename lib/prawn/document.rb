@@ -820,21 +820,35 @@ module Prawn
       @bounding_box = @margin_box unless @bounding_box&.parent
     end
 
+    MARGIN_SIDES = %i[top right bottom left].freeze
+    MARGIN_POSITIONS = {
+      4 => [0, 1, 2, 3].freeze,
+      3 => [0, 1, 2, 1].freeze,
+      2 => [0, 1, 0, 1].freeze,
+      1 => [0, 0, 0, 0].freeze,
+      0 => [].freeze,
+    }.freeze
+    MARGIN_SIDE_KEYS = {
+      top: :top_margin,
+      right: :right_margin,
+      bottom: :bottom_margin,
+      left: :left_margin,
+    }.freeze
+    private_constant :MARGIN_SIDES, :MARGIN_POSITIONS, :MARGIN_SIDE_KEYS
+
     def apply_margin_options(options)
-      sides = %i[top right bottom left]
       margin = Array(options[:margin])
 
       # Treat :margin as CSS shorthand with 1-4 values.
-      positions = {
-        4 => [0, 1, 2, 3],
-        3 => [0, 1, 2, 1],
-        2 => [0, 1, 0, 1],
-        1 => [0, 0, 0, 0],
-        0 => [],
-      }[margin.length]
+      positions = MARGIN_POSITIONS[margin.length]
+      if positions.nil?
+        raise ArgumentError,
+          "Margin array has too many values (expected 0 to 4, got #{margin.length})"
+      end
 
-      sides.zip(positions).each do |side, pos|
-        new_margin = options[:"#{side}_margin"] || (margin[pos] if pos)
+      MARGIN_SIDES.each_with_index do |side, i|
+        pos = positions[i]
+        new_margin = options[MARGIN_SIDE_KEYS[side]] || (margin[pos] if pos)
         state.page.margins[side] = new_margin if new_margin
       end
     end

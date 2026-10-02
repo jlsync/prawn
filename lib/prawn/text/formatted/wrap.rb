@@ -103,7 +103,7 @@ module Prawn
 
           out = +''
           printed_fragments.each do |s|
-            out << s.dup.force_encoding(::Encoding::UTF_8)
+            out << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
           end
           @printed_lines << out
         end

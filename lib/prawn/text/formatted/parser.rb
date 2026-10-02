@@ -41,6 +41,12 @@ module Prawn
         # @private
         UNESCAPE_CHARS = ESCAPE_CHARS.invert.freeze
 
+        # @private
+        ESCAPE_REGEXP = Regexp.union(ESCAPE_CHARS.keys).freeze
+
+        # @private
+        UNESCAPE_REGEXP = Regexp.union(UNESCAPE_CHARS.keys).freeze
+
         # Precompiled scan pattern for paragraph splitting
         SCAN_PATTERN = /[^\n]+|\n/
 
@@ -274,7 +280,9 @@ module Prawn
         # @param text [String]
         # @return [String]
         def self.escape(text)
-          text.gsub(Regexp.union(ESCAPE_CHARS.keys), ESCAPE_CHARS)
+          return text.dup unless text.match?(/[&><]/)
+
+          text.gsub(ESCAPE_REGEXP, ESCAPE_CHARS)
         end
 
         # Unescape characters that can interfere with inline format parsing.
@@ -282,7 +290,9 @@ module Prawn
         # @param text [String]
         # @return [String]
         def self.unescape(text)
-          text.gsub(Regexp.union(UNESCAPE_CHARS.keys), UNESCAPE_CHARS)
+          return text.dup unless text.include?('&')
+
+          text.gsub(UNESCAPE_REGEXP, UNESCAPE_CHARS)
         end
       end
     end

@@ -186,6 +186,11 @@ describe Prawn::Graphics do
         dashes = PDF::Inspector::Graphics::Dash.analyze(pdf.render)
         expect(dashes.stroke_dash).to eq([[], 0])
       end
+
+      it 'keeps the undashed state mutable' do
+        pdf.undash
+        expect { pdf.dash[:phase] = 1 }.to_not raise_error
+      end
     end
 
     it 'carries the current dash settings over to new pages' do

@@ -62,5 +62,15 @@ describe Prawn::TransformationStack do
       expect(pdf.current_transformation_matrix_with_translation(15, 15))
         .to eq [2, 0, 0, 2, 170, 170]
     end
+
+    context 'when transformation stack is empty' do
+      let(:untransformed_pdf) { create_pdf }
+
+      it 'preserves exact number types like Rational without coercing to Float' do
+        result = untransformed_pdf.current_transformation_matrix_with_translation(Rational(1, 3), 0)
+        expect(result).to eq [1, 0, 0, 1, Rational(1, 3), 0]
+        expect(result[4]).to be_a(Rational)
+      end
+    end
   end
 end
