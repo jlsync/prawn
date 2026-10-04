@@ -316,7 +316,13 @@ module Prawn
           fragment, normalized_soft_hyphen = nil
         )
           remaining_text =
-            fragment.slice(@fragment_output.length..fragment.length)
+            # Two Integer arguments rather than a Range: a Range with variable
+            # endpoints is allocated per call, and this halves the objects this
+            # line produces. A literal Range (e.g. `0..-2` elsewhere in the text
+            # stack) is optimised by Ruby and does not need this.
+            fragment.slice(
+              @fragment_output.length, fragment.length - @fragment_output.length,
+            )
           if line_finished? && line_empty? && @fragment_output.empty? &&
               fragment.match?(/\S/)
             raise Prawn::Errors::CannotFit
