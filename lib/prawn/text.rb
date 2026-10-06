@@ -65,7 +65,7 @@ module Prawn
     # as UTF-8, only characters that are available in WinAnsi are allowed.
     #
     # If an empty box is rendered to your PDF instead of the character you
-    # wanted it usually means the current font doesn't include that character.
+    # wanted, it usually means the current font doesn't include that character.
     #
     # @param string [String]
     # @param options [Hash{Symbol => any}]
@@ -324,7 +324,7 @@ module Prawn
     # as UTF-8, only characters that are available in WinAnsi are allowed.
     #
     # If an empty box is rendered to your PDF instead of the character you
-    # wanted it usually means the current font doesn't include that character.
+    # wanted, it usually means the current font doesn't include that character.
     #
     # @param text [String]
     # @param options [Hash{Symbol => any}]

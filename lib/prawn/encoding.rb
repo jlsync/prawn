@@ -3,7 +3,7 @@
 module Prawn
   # @private
   module Encoding
-    # Map between unicode and WinAnsiEnoding
+    # Map between unicode and WinAnsiEncoding
     #
     # @private
     class WinAnsi

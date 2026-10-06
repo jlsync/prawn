@@ -481,7 +481,7 @@ module Prawn
         @y
       end
 
-      # Absolute bottom y-coordinate of the bottom box.
+      # Absolute bottom y-coordinate of the bounding box.
       #
       # @return [Number]
       def absolute_bottom
@@ -509,7 +509,7 @@ module Prawn
         [absolute_left, absolute_bottom]
       end
 
-      # Absolute bottom-left point of the bounding box.
+      # Absolute bottom-right point of the bounding box.
       #
       # @return [Array(Number, Number)]
       def absolute_bottom_right

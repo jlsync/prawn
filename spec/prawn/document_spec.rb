@@ -474,7 +474,7 @@ describe Prawn::Document do
   end
 
   describe '#render' do
-    it 'returns a 8 bit encoded string on a m17n aware VM' do
+    it 'returns an 8-bit encoded string on an m17n aware VM' do
       pdf = described_class.new(page_size: 'A4', page_layout: :landscape)
       pdf.line([100, 100], [200, 200])
       str = pdf.render
