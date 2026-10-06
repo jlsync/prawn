@@ -10,8 +10,8 @@ require "prawn"
 
 require "prawn/measurement_extensions"
 
-# this makes the following units available (Millimeters, Centimeters, Decimeters, Meters, Inches, Foot, Yards, Points)
-# Methodname is the common abbravation for the unit (mm, cm, dm, m, in, ft, yd, pt)
+# this makes the following units available (Millimeters, Centimeters, Decimeters, Meters, Inches, Feet, Yards, Points)
+# Method name is the common abbreviation for the unit (mm, cm, dm, m, in, ft, yd, pt)
 # Usage: '10.mm'. 
 # This converts 10mm to PDF points, which Prawn uses internally.
 
@@ -40,7 +40,7 @@ units.each_with_index do |unit, unit_index| #iterate through all units that make
   pdf.stroke_line(offset, pdf.bounds.top, offset, pdf.bounds.bottom)
   
   0.upto(((pdf.bounds.height - 5.mm) / one_unit_in_pt).to_i) do |i| # checks, how many strokes can be drawn
-    pdf.stroke_line(offset, i * one_unit_in_pt, (i % 5 == 0 ? 6.mm : 3.mm) + offset, i * one_unit_in_pt) # every fifth stroke is twice as large like on a real ruler
+    pdf.stroke_line(offset, i * one_unit_in_pt, (i % 5 == 0 ? 6.mm : 3.mm) + offset, i * one_unit_in_pt) # every fifth stroke is twice as large as on a real ruler
     pdf.text "#{i}#{unit}", :at => [7.mm + offset, i * one_unit_in_pt] unless unit == "mm" && i % 5 != 0 || unit == "pt" && i % 10 != 0 # avoid text too close to each other
   end    
 end

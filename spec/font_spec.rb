@@ -37,7 +37,7 @@ describe "font style support" do
       :Courier, :Helvetica]
   end
 
-  it "should allow font familes to be defined in a single dfont" do
+  it "should allow font families to be defined in a single dfont" do
     file = "#{Prawn::BASEDIR}/data/fonts/Action Man.dfont"
     @pdf.font_families["Action Man"] = {
       :normal      => { :file => file, :font => "ActionMan" },
@@ -77,7 +77,7 @@ describe "Transactional font handling" do
     @pdf.font_size.should == 12
   end
 
-  it "should mask font size when using a transacation" do
+  it "should mask font size when using a transaction" do
     @pdf.font "Courier", :size => 16 do
       @pdf.font_size.should == 16
     end

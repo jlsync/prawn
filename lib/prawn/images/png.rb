@@ -182,7 +182,7 @@ module Prawn
           row += 1
         end
 
-        # convert the pixel data to seperate strings for colours and alpha
+        # convert the pixel data to separate strings for colours and alpha
         pixels.each do |row|
           row.each do |pixel|
             @img_data << pixel[0,pixel_bytes].pack("C*")

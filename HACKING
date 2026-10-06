@@ -19,7 +19,7 @@ If you are running on Ruby 1.9.1, you will need Test::Unit 1.2.3
 
   1. File a ticket in Lighthouse describing your feature with 'request'
   2. Fork Prawn on Github, make your changes
-  3. Submit pull request so Gregory is notified
+  3. Submit a pull request so Gregory is notified
   4. Link your commits on Lighthouse
   
   If you are working on a ticket that has already been created, skip step 1.

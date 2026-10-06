@@ -1,6 +1,6 @@
 # encoding: utf-8
 
-# annotations.rb : Implements destination support for PDF
+# destinations.rb : Implements destination support for PDF
 #
 # Copyright November 2008, Jamis Buck. All Rights Reserved.
 #
@@ -14,7 +14,7 @@ module Prawn
       # The maximum number of children to fit into a single node in the Dests tree.
       NAME_TREE_CHILDREN_LIMIT = 20 #:nodoc:
       
-      # The Dests name tree in the Name dictionary (see Prawn::Document::Internal#names).
+      # The Dests name tree in the Name dictionary (see Prawn::Document::Internals#names).
       # This name tree is used to store named destinations (PDF spec 8.2.1).
       # (For more on name trees, see section 3.8.4 in the PDF spec.)
       def dests
@@ -59,7 +59,7 @@ module Prawn
         [page, :FitR, left, bottom, right, top]
       end
 
-      # Return a Dest specfication that will fit the given page's bounding box
+      # Return a Dest specification that will fit the given page's bounding box
       # into the viewport.
       def dest_fit_bounds(page=@current_page)
         [page, :FitB]

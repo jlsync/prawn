@@ -1,13 +1,13 @@
 # encoding: utf-8
 #
-# FIXME: Introducing TTFunk into Prawn broke this example and a cooresponding
+# FIXME: Introducing TTFunk into Prawn broke this example and a corresponding
 # test.  Ticket: #139
 #
-# Tests passing non utf-8 data into Prawns text function. Should
+# Tests passing non utf-8 data into Prawn's text function. Should
 # be transparently converted to utf-8 and rendered as usual.
 # 
 # NOTE: only works on ruby1.9 compatible VMs, and requires the current
-#       font to include japanese glyphs. On 1.8.x comaptible VMs, an exception
+#       font to include japanese glyphs. On 1.8.x compatible VMs, an exception
 #       will be raised.
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', '..', 'lib'))

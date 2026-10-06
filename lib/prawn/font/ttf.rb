@@ -234,7 +234,7 @@ module Prawn
         # if their font name is more than 33 bytes long. Strange. But true.
         basename = font.name.postscript_name[0, 33]
 
-        raise "Can't detect a postscript name for #{file}" if basename.nil?
+        raise "Can't detect a postscript name for #{@name}" if basename.nil?
 
         compressed_font = Zlib::Deflate.deflate(font_content)
 
@@ -262,7 +262,7 @@ module Prawn
         # It would be nice to have Encoding set for the macroman subsets,
         # and only do a ToUnicode cmap for non-encoded unicode subsets.
         # However, apparently Adobe Reader won't render MacRoman encoded
-        # subsets if original font contains unicode characters. (It has to
+        # subsets if the original font contains unicode characters. (It has to
         # be some flag or something that ttfunk is simply copying over...
         # but I can't figure out which flag that is.)
         #

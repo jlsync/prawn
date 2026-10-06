@@ -69,7 +69,7 @@ module Prawn
     # margin_box (which is itself a bounding box).  You can also nest bounding
     # boxes, allowing you to build components which are relative to each other
     #
-    # pdf.bouding_box([200,450], :width => 200, :height => 250) do
+    # pdf.bounding_box([200,450], :width => 200, :height => 250) do
     #   pdf.bounding_box([50,200], :width => 50, :height => 50) do
     #     # a 50x50 bounding box that starts 50 pixels left and 50 pixels down 
     #     # the parent bounding box.
@@ -142,7 +142,7 @@ module Prawn
       end
     end  
     
-    # A bounding box with the same dimensions of its parents, minus a margin
+    # A bounding box with the same dimensions as its parent, minus a margin
     # on all sides
     #
     def padded_box(margin, &block)
@@ -284,7 +284,7 @@ module Prawn
         @y
       end
       
-      # Absolute bottom y-coordinate of the bottom box
+      # Absolute bottom y-coordinate of the bounding box
       #
       def absolute_bottom
         @y - height
@@ -308,7 +308,7 @@ module Prawn
         [absolute_left, absolute_bottom]
       end
 
-      # Absolute bottom-left point of the bounding box
+      # Absolute bottom-right point of the bounding box
       #
       def absolute_bottom_right
         [absolute_right, absolute_bottom]

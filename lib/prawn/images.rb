@@ -20,7 +20,7 @@ module Prawn
     # Options:
     # <tt>:at</tt>:: an array [x,y] with the location of the top left corner of the image.
     # <tt>:position</tt>::  One of (:left, :center, :right) or an x-offset
-    # <tt>:vposition</tt>::  One of (:top, :center, :center) or an y-offset    
+    # <tt>:vposition</tt>::  One of (:top, :center, :bottom) or a y-offset    
     # <tt>:height</tt>:: the height of the image [actual height of the image]
     # <tt>:width</tt>:: the width of the image [actual width of the image]
     # <tt>:scale</tt>:: scale the dimensions of the image proportionally
@@ -34,12 +34,12 @@ module Prawn
     #     image dice, :at => [50, 450], :scale => 0.75 
     #   end   
     #
-    # If only one of :width / :height are provided, the image will be scaled
+    # If only one of :width / :height is provided, the image will be scaled
     # proportionally.  When both are provided, the image will be stretched to 
     # fit the dimensions without maintaining the aspect ratio.
     #
     #
-    # If :at is provided, the image will be place in the current page but
+    # If :at is provided, the image will be placed in the current page but
     # the text position will not be changed.
     #
     #
@@ -187,7 +187,7 @@ module Prawn
       end
 
       if png.interlace_method != 0
-        raise ArgumentError, 'PNG uses unsupported interlace method'
+        raise ArgumentError, 'PNG uses an unsupported interlace method'
       end
 
       if png.bits > 8
@@ -225,7 +225,7 @@ module Prawn
       if png.palette.empty?
         obj.data[:ColorSpace] = color
       else
-        # embed the colour palette in the PDF as a object stream
+        # embed the colour palette in the PDF as an object stream
         palette_obj = ref(:Length => png.palette.size)
         palette_obj << png.palette
 
@@ -256,14 +256,14 @@ module Prawn
         rgb = png.transparency[:rgb]
         obj.data[:Mask] = rgb.collect { |val| [val,val] }.flatten
       elsif png.transparency[:indexed]
-        # TODO: broken. I was attempting to us Color Key Masking, but I think
-        #       we need to construct an SMask i think. Maybe do it inside
+        # TODO: broken. I was attempting to use Color Key Masking, but I think
+        #       we need to construct an SMask, I think. Maybe do it inside
         #       the PNG class, and store it in alpha_channel
         #obj.data[:Mask] = png.transparency[:indexed]
       end
 
-      # For PNG color types 4 and 6, the transparency data is stored as a alpha
-      # channel mixed in with the main image data. The PNG class seperates
+      # For PNG color types 4 and 6, the transparency data is stored as an alpha
+      # channel mixed in with the main image data. The PNG class separates
       # it out for us and makes it available via the alpha_channel attribute
       if png.alpha_channel
         smask_obj = ref(:Type             => :XObject,

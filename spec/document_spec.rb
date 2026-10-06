@@ -183,7 +183,7 @@ end
 
 describe "The render() feature" do
   if "spec".respond_to?(:encode!)
-    it "should return a 8 bit encoded string on a m17n aware VM" do
+    it "should return an 8-bit encoded string on an m17n aware VM" do
       @pdf = Prawn::Document.new(:page_size => "A4", :page_layout => :landscape)
       @pdf.line [100,100], [200,200]
       str = @pdf.render

@@ -11,7 +11,7 @@ require 'stringio'
 module Prawn
   module Images
     # A convenience class that wraps the logic for extracting the parts
-    # of a PNG image that we need to embed them in a PDF
+    # of a JPG image that we need to embed in a PDF
     class JPG 
       attr_reader :width, :height, :bits, :channels
       attr_accessor :scaled_width, :scaled_height
@@ -21,7 +21,7 @@ module Prawn
 
       # Process a new JPG image
       #
-      # <tt>:data</tt>:: A string containing a full PNG file
+      # <tt>:data</tt>:: A string containing a full JPG file
       #
       def initialize(data)
         data = StringIO.new(data.dup)

@@ -1,7 +1,7 @@
 # encoding: utf-8
 #
-# Prints a list of all of the glyphs that can be rendered by Adobe's built
-# in fonts, along with their character widths and WinAnsi codes.  Be sure
+# Prints a list of all of the glyphs that can be rendered by Adobe's built-in
+# fonts, along with their character widths and WinAnsi codes.  Be sure
 # to pass these glyphs as UTF-8, and Prawn will transcode them for you.
 #
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', '..', 'lib'))

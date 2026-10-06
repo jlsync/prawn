@@ -6,7 +6,7 @@
 #
 # A fix in 200fc36455fa3bee0e1e3bb25d1b5bf73dbf3b52 makes it so the bottom
 # of the margin_box will be used as the page boundary in stretchy bounding 
-# boxes.  Ideally, this would instead use the nesting bounding box dimensions
+# boxes.  Ideally, this would instead use the enclosing bounding box dimensions
 # [#80] , but this works for now.
 #
 $LOAD_PATH << File.join(File.dirname(__FILE__), '..', '..', 'lib')

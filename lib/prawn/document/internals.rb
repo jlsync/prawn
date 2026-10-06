@@ -20,7 +20,7 @@ module Prawn
       # 
       # If a block is given, it will be invoked just before the object is written
       # out to the PDF document stream. This allows you to do deferred processing
-      # on some references (such as fonts, which you might know all the details
+      # on some references (such as fonts, which you might not know all the details
       # about until the last page of the document is finished).
       def ref(data, &block)
         @objects.push(Prawn::Reference.new(@objects.size + 1, data, &block)).last
@@ -38,7 +38,7 @@ module Prawn
        @page_content << str << "\n"
       end  
 
-      # Add a new type to the current pages ProcSet 
+      # Add a new type to the current page's ProcSet 
       #
       def proc_set(*types)
         @current_page.data[:ProcSet] ||= ref([])

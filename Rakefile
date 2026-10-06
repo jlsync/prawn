@@ -22,7 +22,7 @@ task :stats do
 	                    ["Specs", "spec"] ).to_s
 end
 
-desc "genrates documentation"
+desc "generates documentation"
 Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include( "README",
                            "COPYING",
@@ -61,7 +61,7 @@ spec = Gem::Specification.new do |spec|
   spec.rdoc_options << '--title' << 'Prawn Documentation' <<
                        '--main'  << 'README' << '-q'
   spec.author = "Gregory Brown"
-  spec.email = "  gregory.t.brown@gmail.com"
+  spec.email = "gregory.t.brown@gmail.com"
   spec.rubyforge_project = "prawn"
   spec.homepage = "http://prawn.majesticseacreature.com"
   spec.description = <<END_DESC

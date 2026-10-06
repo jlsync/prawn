@@ -1,5 +1,5 @@
 # As of 96f660660345c7c22923ba51d0124022a3a189ab, table is currently not taking
-# in account border widths when filling in rows with background coloring.  This
+# into account border widths when filling in rows with background coloring.  This
 # means the larger the border, the larger the visible gap between rows.    
 #
 # This problem was fixed in 97d9bf083fd9423d17fd1efca36ea675ff34a6d7, but
