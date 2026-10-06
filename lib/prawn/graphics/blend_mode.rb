@@ -46,7 +46,7 @@ module Prawn
       end
 
       def blend_mode_dictionary_name(blend_mode)
-        key = Array(blend_mode).join
+        key = blend_mode.is_a?(Array) ? blend_mode.join : blend_mode.to_s
         dictionary_name = "BM#{key}"
 
         dictionary = blend_mode_dictionary_registry[dictionary_name] ||= ref!(
