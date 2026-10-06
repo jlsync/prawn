@@ -24,7 +24,7 @@ module Prawn
   
   extend self
 
-  # Whe set to true, Prawn will verify hash options to ensure only valid keys
+  # When set to true, Prawn will verify hash options to ensure only valid keys
   # are used.  Off by default.
   # 
   attr_accessor :debug

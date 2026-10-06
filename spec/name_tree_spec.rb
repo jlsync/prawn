@@ -42,14 +42,14 @@ describe "Name Tree" do
     tree_dump(node).should == "[[four=4,one=1],[three=3,two=2]]"
   end
 
-  it "should create a two new references when root is split" do
+  it "should create two new references when root is split" do
     ref_count = @pdf.objects.length
     node = Prawn::NameTree::Node.new(@pdf, 3)
     tree_add(node, ["one", 1], ["two", 2], ["three", 3], ["four", 4])
     @pdf.objects.length.should.equal ref_count+2
   end
   
-  it "should create a one new reference when subtree is split" do
+  it "should create one new reference when subtree is split" do
     node = Prawn::NameTree::Node.new(@pdf, 3)
     tree_add(node, ["one", 1], ["two", 2], ["three", 3], ["four", 4])
 

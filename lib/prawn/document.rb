@@ -45,7 +45,7 @@ module Prawn
     #
     # If you need to access your local and instance variables, use the explicit
     # block form shown below.  In this case, Prawn yields an instance of
-    # PDF::Document and the block is an ordinary closure:     
+    # Prawn::Document and the block is an ordinary closure:     
     #
     #   # Using explicit block form and rendering to a file   
     #   content = "Hello World"
@@ -211,7 +211,7 @@ module Prawn
       self.y += n
     end
 
-    # Moves down the document by n point
+    # Moves down the document by n points
     # 
     def move_down(n)
       self.y -= n

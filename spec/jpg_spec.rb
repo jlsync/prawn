@@ -1,8 +1,6 @@
 # encoding: utf-8
 
-# Spec'ing the PNG class. Not complete yet - still needs to check the
-# contents of palette and transparency to ensure they're correct.
-# Need to find files that have these sections first.
+# Spec'ing the JPG class.
 
 require File.join(File.expand_path(File.dirname(__FILE__)), "spec_helper")  
 

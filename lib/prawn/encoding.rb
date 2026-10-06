@@ -6,7 +6,7 @@
 #
 module Prawn
   module Encoding
-    # Map between unicode and WinAnsiEnoding
+    # Map between unicode and WinAnsiEncoding
     #
     class WinAnsi #:nodoc:
       CHARACTERS = %w[
@@ -90,13 +90,13 @@ module Prawn
 
       # Converts a Unicode codepoint into a valid WinAnsi single byte character.
       #
-      # If there is no WinAnsi equivlant for a character, a _ will be substituted.
+      # If there is no WinAnsi equivalent for a character, a _ will be substituted.
       #
       def [](codepoint)
         # unicode codepoints < 255 map directly to the single byte value in WinAnsi
         return codepoint if codepoint <= 255
 
-        # There are a handful of codepoints > 255 that have equivilants in WinAnsi.
+        # There are a handful of codepoints > 255 that have equivalents in WinAnsi.
         # Replace anything else with an underscore
         self.class.mapping[codepoint] || 95
       end

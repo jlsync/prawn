@@ -9,7 +9,7 @@ require 'prawn/measurements'
 
 class Numeric
   include Prawn::Measurements        
-  # prawns' basic unit is PostScript-Point        
+  # Prawn's basic unit is PostScript-Point        
   # 72 points per inch
 
   def mm

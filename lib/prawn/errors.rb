@@ -23,7 +23,7 @@ module Prawn
      #
      class UnknownFont < StandardError; end   
 
-     # This error is raised when Prawn is being used on a M17N aware VM,
+     # This error is raised when Prawn is being used on an M17N aware VM,
      # and the user attempts to add text that isn't compatible with UTF-8
      # to their document
      #

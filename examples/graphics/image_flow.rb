@@ -1,7 +1,7 @@
 # encoding: utf-8
 #
 # Demonstrates automated flowing and positioning of images, as well as
-# aligining images along the x-axis via the :position argument.  This is
+# aligning images along the x-axis via the :position argument.  This is
 # useful when used in combination with flowing text, where the exact final
 # position of the image is not known ahead of time.
 #

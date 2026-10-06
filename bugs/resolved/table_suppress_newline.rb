@@ -6,7 +6,7 @@
 $LOAD_PATH << File.join(File.dirname(__FILE__), '..', '..', 'lib')
 require "prawn"
 
-Prawn::Document.generate("table_supresses_newlines.pdf") do
+Prawn::Document.generate("table_suppresses_newlines.pdf") do
   table [["test\n\naaaa","test\n\nbbbb"],
         ["test\n\ncccc", "test\n\ndddd"]],  :border_style => :grid
     

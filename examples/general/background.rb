@@ -14,7 +14,7 @@ Prawn::Document.generate("background.pdf", :background => img) do
   text "My report caption"
   text_options.update(:size => 12, :align => :left, :spacing => 2)
   move_down font.height * 2
-  text "Here is my text explaning this report. " * 20
+  text "Here is my text explaining this report. " * 20
   move_down font.height
   text "I'm using a soft background. " * 40
 end

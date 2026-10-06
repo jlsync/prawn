@@ -17,7 +17,7 @@ module Prawn
     #
     # The single parameter must be a string. It can be one of the 14 built-in
     # fonts supported by PDF, or the location of a TTF file. The Font::AFM::BUILT_INS
-    # array specifies the valid built in font values.
+    # array specifies the valid built-in font values.
     #
     #   pdf.font "Times-Roman"
     #   pdf.font "Chalkboard.ttf"
@@ -95,7 +95,7 @@ module Prawn
     end
 
     # Looks up the given font using the given criteria. Once a font has been
-    # found by that matches the criteria, it will be cached to subsequent lookups
+    # found that matches the criteria, it will be cached so that subsequent lookups
     # for that font will return the same object.
     #--
     # Challenges involved: the name alone is not sufficient to uniquely identify

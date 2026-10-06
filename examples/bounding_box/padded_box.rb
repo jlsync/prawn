@@ -4,7 +4,7 @@
 # the current bounds.  This is easier to see than explain, so please run the
 # example.
 #
-# Feature borrowed from Josh Knowle's pt at:
+# Feature borrowed from Josh Knowles' pt at:
 # http://github.com/joshknowles/pt/tree/master
 #
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', '..', 'lib'))

@@ -5,7 +5,7 @@
 # Need to find files that have these sections first.
 #
 # see http://www.w3.org/TR/PNG/ for a detailed description of the PNG spec,
-# particuarly Table 11.1 for the different color types
+# particularly Table 11.1 for the different color types
 
 require File.join(File.expand_path(File.dirname(__FILE__)), "spec_helper")
 
@@ -87,7 +87,7 @@ describe "When reading an RGB PNG file with transparency (color type 2)" do
     @img_data = File.binread(@filename)
   end
 
-  # In a RGB type 2 PNG image, the tRNS chunk should contain a single RGB value
+  # In an RGB type 2 PNG image, the tRNS chunk should contain a single RGB value
   # that indicates the color that should be interpreted as transparent. In this
   # case it's green.
   #
@@ -98,7 +98,7 @@ describe "When reading an RGB PNG file with transparency (color type 2)" do
   end
 end
 
-# TODO: describe "When reading an indexed color PNG file wiih transparency (color type 3)"
+# TODO: describe "When reading an indexed color PNG file with transparency (color type 3)"
 
 describe "When reading an indexed color PNG file (color type 3)" do
 

@@ -23,7 +23,7 @@ module Prawn
       #
       # When +:at+ is not specified, Prawn attempts to wrap the text to
       # fit within your current bounding box (or margin_box if no bounding box
-      # is being used ). Text will flow onto the next page when it reaches
+      # is being used). Text will flow onto the next page when it reaches
       # the bottom of the bounding box. Text wrap in Prawn does not re-flow
       # linebreaks, so if you want fully automated text wrapping, be sure to
       # remove newlines before attempting to draw your string.  
@@ -65,10 +65,10 @@ module Prawn
       # are allowed.
       #
       # If an empty box is rendered to your PDF instead of the character you 
-      # wanted it usually means the current font doesn't include that character.
+      # wanted, it usually means the current font doesn't include that character.
       #
       def text(text,options={})            
-        # we'll be messing with the strings encoding, don't change the users
+        # we'll be messing with the string's encoding, don't change the user's
         # original string
         text = text.to_s.dup                      
         

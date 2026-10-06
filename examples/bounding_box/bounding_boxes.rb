@@ -33,7 +33,7 @@ Prawn::Document.generate("bounding_boxes.pdf") do
       line bounds.top_right, bounds.bottom_left
     end
     
-    # Generates a nested bonding box and strokes its boundaries.  Note that
+    # Generates a nested bounding box and strokes its boundaries.  Note that
     # this box is anchored relative to its parent bounding box, not the
     # margin_box 
     bounding_box [50,150], :width => 100, :height => 100 do

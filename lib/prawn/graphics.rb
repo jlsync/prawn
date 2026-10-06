@@ -134,7 +134,7 @@ module Prawn
       horizontal_line(bounds.left, bounds.right)
     end
 
-    # Draws a vertical line at the x cooordinate given by :at from y1 to y2.
+    # Draws a vertical line at the x coordinate given by :at from y1 to y2.
     #
     #   # draw a line from [25, 100] to [25, 300]
     #   vertical_line 100, 300, :at => 25
@@ -160,7 +160,7 @@ module Prawn
 
     # Draws a circle of radius <tt>:radius</tt> with the centre-point at <tt>point</tt>
     # as a complete subpath. The drawing point will be moved to the
-    # centre-point upon completion of the drawing the circle.
+    # centre-point upon completion of drawing the circle.
     #
     #    pdf.circle_at [100,100], :radius => 25
     #
@@ -171,7 +171,7 @@ module Prawn
 
     # Draws an ellipse of +x+ radius <tt>r1</tt> and +y+ radius <tt>r2</tt>
     # with the centre-point at <tt>point</tt> as a complete subpath. The
-    # drawing point will be moved to the centre-point upon completion of the
+    # drawing point will be moved to the centre-point upon completion of
     # drawing the ellipse.
     #
     #    # draws an ellipse with x-radius 25 and y-radius 50
@@ -215,7 +215,7 @@ module Prawn
       end
     end
 
-    # Strokes and closes the current path. See Graphic::Color for color details
+    # Strokes and closes the current path. See Graphics::Color for color details
     #
     def stroke
       yield if block_given?
@@ -228,14 +228,14 @@ module Prawn
       stroke_rectangle bounds.top_left, bounds.width, bounds.height
     end
 
-    # Fills and closes the current path. See Graphic::Color for color details
+    # Fills and closes the current path. See Graphics::Color for color details
     #
     def fill
       yield if block_given?
       add_content "f"
     end
 
-    # Fills, strokes, and closes the current path. See Graphic::Color for color details
+    # Fills, strokes, and closes the current path. See Graphics::Color for color details
     #
     def fill_and_stroke
       yield if block_given?

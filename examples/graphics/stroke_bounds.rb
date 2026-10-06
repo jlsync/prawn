@@ -1,11 +1,11 @@
 # encoding: utf-8
 #
-# Demonstrates Document#stroke_bounds, which will stroke a rectange outlining
+# Demonstrates Document#stroke_bounds, which will stroke a rectangle outlining
 # the boundaries of the current bounding box.  This is useful for debugging
 # and can also be used as a light-weight and lower level alternative to
 # Cells.  
 #
-# Feature borrowed from Josh Knowle's pt at:
+# Feature borrowed from Josh Knowles' pt at:
 # http://github.com/joshknowles/pt/tree/master
 #
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', '..', 'lib'))

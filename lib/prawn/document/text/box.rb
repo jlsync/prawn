@@ -9,7 +9,7 @@
 module Prawn
   class Document
     
-    # Defines an invisible rectangle which you can flow text in. When the
+    # Defines an invisible rectangle in which you can flow text. When the
     # text overflows the box, you can either display :ellipses, :truncate
     # the text, or allow it to :overflow the bottom boundary.
     #
