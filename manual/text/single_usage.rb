@@ -32,7 +32,7 @@ Prawn::ManualBuilder::Chapter.new do
     text 'Written with the default font.'
     move_down 20
 
-    # Using a DFONT font file
+    # Using an DFONT font file
     font("#{Prawn::ManualBuilder::DATADIR}/fonts/Panic+Sans.dfont") do
       text 'Written with the Panic Sans DFONT font'
     end
