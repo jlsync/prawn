@@ -51,7 +51,7 @@ module Prawn
       yd * 36
     end
 
-    # PostscriptPoint-converisons
+    # PostscriptPoint-conversions
 
     # Convert points to points. For completeness.
     #

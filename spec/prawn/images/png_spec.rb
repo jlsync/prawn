@@ -104,7 +104,7 @@ describe Prawn::Images::PNG do
   describe 'When reading an RGB PNG file with transparency (color type 2)' do
     let(:img_data) { File.binread("#{Prawn::DATADIR}/images/arrow2.png") }
 
-    # In a RGB type 2 PNG image, the tRNS chunk should contain a single RGB
+    # In an RGB type 2 PNG image, the tRNS chunk should contain a single RGB
     # value that indicates the color that should be interpreted as transparent.
     # In this case it's green.
     #

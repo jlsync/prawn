@@ -120,13 +120,13 @@ module Prawn
               4
             end
 
-          # Codespaces are not sequentional, they're ranges in
-          # a multi-dimentional space. Each byte is considered separately. So we
+          # Codespaces are not sequential, they're ranges in
+          # a multi-dimensional space. Each byte is considered separately. So we
           # have to maximally extend the lower two bytes in order to allow for
-          # continuos Unicode mapping.
+          # continuous Unicode mapping.
           # We only keep the highest byte because Unicode only goes to 1FFFFF
           # and fonts usually cover even less of the space. We don't want to
-          # list all those unmapped charac codes here.
+          # list all those unmapped character codes here.
           @code_space_max = cmap.code_map.keys.max | ('ff' * (code_space_size - 1)).to_i(16)
         end
 
@@ -542,7 +542,7 @@ module Prawn
             else
               # These characters are not in the document so we don't ever use
               # these values but we need to encode them so let's use as little
-              # sapce as possible.
+              # space as possible.
               0
             end
           }
@@ -550,7 +550,7 @@ module Prawn
         # It would be nice to have Encoding set for the macroman subsets,
         # and only do a ToUnicode cmap for non-encoded unicode subsets.
         # However, apparently Adobe Reader won't render MacRoman encoded
-        # subsets if original font contains unicode characters. (It has to
+        # subsets if the original font contains unicode characters. (It has to
         # be some flag or something that ttfunk is simply copying over...
         # but I can't figure out which flag that is.)
         #

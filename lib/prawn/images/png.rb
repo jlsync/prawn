@@ -194,7 +194,7 @@ module Prawn
 
         if interlace_method != 0
           raise Errors::UnsupportedImageType,
-            'PNG uses unsupported interlace method'
+            'PNG uses an unsupported interlace method'
         end
 
         # some PNG types store the colour and alpha channel data together,

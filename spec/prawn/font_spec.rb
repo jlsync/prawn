@@ -246,7 +246,7 @@ describe Prawn::Font do
       expect(pdf.font_size).to eq(12)
     end
 
-    it 'masks font size when using a transacation' do
+    it 'masks font size when using a transaction' do
       pdf.font('Courier', size: 16) do
         expect(pdf.font_size).to eq(16)
       end

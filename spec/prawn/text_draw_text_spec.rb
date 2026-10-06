@@ -97,7 +97,7 @@ describe Prawn::Text do
       expect(text.font_settings[1][:size]).to eq(12)
     end
 
-    it 'allows manual setting the font size when in a font size block' do
+    it 'allows manually setting the font size when in a font size block' do
       pdf.font_size(16) do
         pdf.draw_text('Foo', at: [0, 0])
         pdf.draw_text('Blah', size: 11, at: [0, 0])

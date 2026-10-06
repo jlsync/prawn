@@ -272,7 +272,7 @@ module Prawn
 
     # Draws a circle of radius `radius` with the centre-point at
     # `point` as a complete subpath. The drawing point will be moved to
-    # the centre-point upon completion of the drawing the circle.
+    # the centre-point upon completion of drawing the circle.
     #
     # @example
     #    pdf.circle [100, 100], 25
@@ -286,7 +286,7 @@ module Prawn
 
     # Draws an ellipse of `x` radius `radius1` and `y` radius `radius2` with the
     # centre-point at `point` as a complete subpath. The drawing point will be
-    # moved to the centre-point upon completion of the drawing the ellipse.
+    # moved to the centre-point upon completion of drawing the ellipse.
     #
     # @example Draws an ellipse with x-radius 25 and y-radius 50
     #    pdf.ellipse [100, 100], 25, 50
