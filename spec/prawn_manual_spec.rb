@@ -6,7 +6,7 @@ require 'digest/sha2'
 MANUAL_HASH =
   case RUBY_ENGINE
   when 'ruby'
-    'f29776ffec6e9226d2cca386b4dd31a89f3238f45361252c06df7b49e3fbaa206534c53bb04a2e6d84ec43246d0a4d29c8378c24fc6bf7ec8f687a434d63e7f8'
+    '9b49e37d52c13a0a482be417ab8b7d463dc98844e5ea2a606eda83a0b673a6f5f30ae003406bee05d4ab7e56ecfa45b9b72a0992608c9d66ffb3bcef72e05475'
   when 'jruby'
     '71a8afed39bc9281dafd297e0258712df72edb4fca6b406678b6c858284b9ef59e83b7e5147aaae906a80c764ee49faef71ef9fcd25fef2e9f7ee7037cf8b63d'
   end
