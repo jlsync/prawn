@@ -810,7 +810,7 @@ describe Prawn::Text::Formatted::Box do
   end
 
   describe 'Text::Formatted::Box#render with :valign => :center' do
-    it 'has a bottom gap equal to baseline and bottom of box' do
+    it 'leaves equal gaps above the ascender and below the descender' do
       box_height = 100
       y = 450
       array = [{ text: 'Vertical Align' }]
@@ -824,10 +824,62 @@ describe Prawn::Text::Formatted::Box do
       }
       text_box = described_class.new(array, options)
       text_box.render
-      line_padding = (box_height - text_box.height + text_box.descender) * 0.5
-      baseline = y - line_padding
+      contents = PDF::Inspector::Text.analyze(pdf.render)
+      top_gap = y - (contents.positions.first[1] + text_box.ascender)
+      bottom_gap = contents.positions.last[1] - text_box.descender - (y - box_height)
 
-      expect(text_box.at[1]).to be_within(0.01).of(baseline)
+      expect(top_gap).to be_within(0.01).of(bottom_gap)
+    end
+
+    it 'centers a multiline block including its leading and final descender' do
+      text_box = described_class.new(
+        [{ text: "Typography\ngypqj" }],
+        document: pdf, valign: :center, at: [0, 100], width: 300,
+        height: 80, size: 16, leading: 3,
+      )
+      expect(text_box.render).to be_empty
+      contents = PDF::Inspector::Text.analyze(pdf.render)
+      top_gap = 100 - (contents.positions.first[1] + text_box.ascender)
+      bottom_gap = contents.positions.last[1] - text_box.descender - 20
+
+      expect(contents.positions.size).to eq(2)
+      expect(top_gap).to be_within(0.01).of(bottom_gap)
+    end
+
+    ['Helvetica', "#{Prawn::DATADIR}/fonts/DejaVuSans.ttf"].each do |font|
+      it "keeps shrink-to-fit descenders within the box with #{File.basename(font)}" do
+        pdf.font(font)
+        text_box = described_class.new(
+          [{ text: 'gypqj' }],
+          document: pdf, valign: :center, at: [0, 100], width: 300,
+          height: 40, size: 100, overflow: :shrink_to_fit,
+        )
+        expect(text_box.render).to be_empty
+        contents = PDF::Inspector::Text.analyze(pdf.render)
+        top_gap = 100 - (contents.positions.first[1] + text_box.ascender)
+        bottom_gap = contents.positions.last[1] - text_box.descender - 60
+
+        expect(top_gap).to be >= -0.01
+        expect(bottom_gap).to be >= -0.01
+        expect(top_gap).to be_within(0.01).of(bottom_gap)
+      end
+    end
+
+    it 'keeps an exactly fitted line inside the box during dry run and rendering' do
+      pdf.font_size(16)
+      box_height = pdf.font.ascender + pdf.font.descender
+      text_box = described_class.new(
+        [{ text: 'gypqj' }],
+        document: pdf, valign: :center, at: [0, 100], width: 300,
+        height: box_height, size: 16,
+      )
+      expect(text_box.render(dry_run: true)).to be_empty
+      expect(text_box.at[1]).to be_within(0.0001).of(100)
+      expect(text_box.render).to be_empty
+      contents = PDF::Inspector::Text.analyze(pdf.render)
+      bottom = contents.positions.last[1] - text_box.descender
+
+      expect(bottom).to be_within(0.01).of(100 - box_height)
     end
   end
 

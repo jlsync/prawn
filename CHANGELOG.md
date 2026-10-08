@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Center text boxes including descenders
+
+Vertical `:center` alignment now centers the full measured text height,
+including the final line's descender. Previously an extra half-descender shift
+could draw text below the box after `:shrink_to_fit` had fitted it to the
+available height. Centered text moves upward by half the final descender height;
+`:top` and `:bottom` alignment are unchanged.
+
 ### Cache parsed TrueType fonts between documents
 
 Parsing a TrueType/OpenType font file is most of the cost of rendering a short

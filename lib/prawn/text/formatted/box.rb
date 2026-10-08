@@ -593,7 +593,8 @@ module Prawn
 
           case @vertical_align
           when :center
-            @at[1] -= (@height - height + @descender) * 0.5
+            # The measured height already includes the final descender.
+            @at[1] -= (@height - height) * 0.5
           when :bottom
             @at[1] -= (@height - height)
           else
