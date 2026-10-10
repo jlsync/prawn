@@ -9,8 +9,8 @@ gem 'prawn-dev', '~> 0.7.0', git: 'https://github.com/jlsync/prawn-dev.git', bra
 
 # Use the jlsync forks of pdf-core and ttfunk, which carry performance fixes
 # not yet in a release.
-gem 'pdf-core', github: 'jlsync/pdf-core'
-gem 'ttfunk', github: 'jlsync/ttfunk'
+gem 'pdf-core', github: 'jlsync/pdf-core', branch: "master"
+gem 'ttfunk', github: 'jlsync/ttfunk', branch: "master"
 
 # prawn-manual_builder uses URI::RFC2396_PARSER, which uri gained in 0.13.1;
 # Ruby 3.3.0 ships uri 0.13.0.
