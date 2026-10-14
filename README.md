@@ -1,7 +1,7 @@
 # Prawn: Fast, Nimble PDF Generation For Ruby
 
 [![Gem Version](https://badge.fury.io/rb/prawn.svg)](http://badge.fury.io/rb/prawn)
-[![Build Status](/jlsync/prawn/actions/workflows/ci.yml/badge.svg)](actions)
+[![Build Status](https://github.com/jlsync/prawn/actions/workflows/ci.yml/badge.svg)](actions)
 ![Maintained: yes](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
 
 Prawn is a pure Ruby PDF generation library that provides a lot of great
