@@ -35,7 +35,7 @@ module Prawn
       def fill_color(*color)
         return current_fill_color if color.empty?
 
-        self.current_fill_color = process_color(*color)
+        self.current_fill_color = color.size == 1 ? color[0] : process_color(*color)
         set_fill_color
       end
 
@@ -67,7 +67,7 @@ module Prawn
       def stroke_color(*color)
         return current_stroke_color if color.empty?
 
-        color = process_color(*color)
+        color = color.size == 1 ? color[0] : process_color(*color)
         self.current_stroke_color = color
         set_stroke_color(color)
       end
@@ -203,7 +203,7 @@ module Prawn
         renderer.add_content("/#{color_space} #{operator}")
       end
 
-      def set_color(type, color, options = {})
+      def set_color(type, color, options = nil)
         operator =
           case type
           when :fill
@@ -214,7 +214,7 @@ module Prawn
             raise ArgumentError, "unknown type '#{type}'"
           end
 
-        if options[:pattern]
+        if options && options[:pattern]
           set_color_space(type, :Pattern)
           renderer.add_content("/#{color} #{operator}")
         else
@@ -263,6 +263,27 @@ module Prawn
       end
 
       def write_color(color, operator)
+        if color.frozen?
+          if operator == 'scn'
+            cache = (@fill_color_cmd_cache ||= {})
+            cmd = cache[color] || (
+              c = -"#{color} scn"
+              cache[color] = c if cache.size < RGB_COLOR_CACHE_SIZE
+              c
+            )
+            renderer.add_content(cmd)
+            return
+          elsif operator == 'SCN'
+            cache = (@stroke_color_cmd_cache ||= {})
+            cmd = cache[color] || (
+              c = -"#{color} SCN"
+              cache[color] = c if cache.size < RGB_COLOR_CACHE_SIZE
+              c
+            )
+            renderer.add_content(cmd)
+            return
+          end
+        end
         renderer.add_content("#{color} #{operator}")
       end
     end

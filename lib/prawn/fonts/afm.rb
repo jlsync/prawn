@@ -204,6 +204,8 @@ module Prawn
       # @param char [String]
       # @return [Boolean]
       def glyph_present?(char)
+        return true if char.ascii_only?
+
         !normalize_encoding(char).nil?
       rescue Prawn::Errors::IncompatibleStringEncoding
         false
@@ -333,27 +335,27 @@ module Prawn
           last_byte = byte
         end
 
+        return [string.dup.force_encoding(::Encoding::Windows_1252)] unless breaks
+
+        if string.encoding != ::Encoding::Windows_1252
+          string = string.dup.force_encoding(::Encoding::Windows_1252)
+        end
+
         # Concatenating the individual byte chunks reproduces the input, so
         # slice the boundaries out of the string instead of accumulating one
         # Array of bytes per chunk and packing it back together.
         result = []
         start = 0
-        if breaks
-          i = 0
-          length = breaks.length
-          while i < length
-            boundary = breaks[i]
-            result << string.byteslice(start, boundary - start)
-            result << breaks[i + 1]
-            start = boundary
-            i += 2
-          end
+        i = 0
+        length = breaks.length
+        while i < length
+          boundary = breaks[i]
+          result << string.byteslice(start, boundary - start)
+          result << breaks[i + 1]
+          start = boundary
+          i += 2
         end
         result << string.byteslice(start, string.bytesize - start)
-
-        result.map! do |e|
-          e.is_a?(String) ? e.force_encoding(::Encoding::Windows_1252) : e
-        end
       end
 
       # Sum of the kerning adjustments for every adjacent byte pair in

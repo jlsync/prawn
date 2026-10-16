@@ -529,10 +529,9 @@ module Prawn
       def height
         return @height if @height
 
-        @stretched_height = [
-          (absolute_top - @document.y),
-          Float(@stretched_height || 0.0),
-        ].max
+        current = absolute_top - @document.y
+        stretched = Float(@stretched_height || 0.0)
+        @stretched_height = current >= stretched ? current : stretched
       end
 
       # An alias for {absolute_left}.

@@ -288,7 +288,10 @@ module Prawn
     # @option options :font [Integer, String] index or name of the font in
     #   a font suitcase/collection
     # @return [Font]
-    def find_font(name, options = {}) # :nodoc:
+    EMPTY_FONT_OPTIONS = {}.freeze
+    private_constant :EMPTY_FONT_OPTIONS
+
+    def find_font(name, options = EMPTY_FONT_OPTIONS) # :nodoc:
       if font_families.key?(name)
         family = name
         name = font_families[name][options[:style] || :normal]
@@ -304,7 +307,12 @@ module Prawn
       font_index = options[:font]
       key =
         if font_index.nil?
-          "#{family}:#{name}:0"
+          if name.instance_of?(String) && (family.nil? || family.instance_of?(String))
+            by_family = ((@font_key_cache ||= {})[family] ||= {})
+            by_family[name] ||= -"#{family}:#{name}:0"
+          else
+            "#{family}:#{name}:0"
+          end
         else
           "#{family}:#{name}:#{font_index}"
         end

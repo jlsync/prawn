@@ -55,6 +55,24 @@ module Prawn
         # @param string [String]
         # @return [Array<Hash>] Text fragments.
         def self.format(string, *_args)
+          if !string.include?('<') && !string.include?("\n")
+            return [] if string.empty?
+
+            return [
+              {
+                text: unescape(string),
+                styles: [],
+                color: nil,
+                local: nil,
+                link: nil,
+                anchor: nil,
+                font: nil,
+                size: nil,
+                character_spacing: nil,
+              },
+            ]
+          end
+
           # Every match of the <br> pattern contains the literal "<br", so the
           # copy can be skipped when it cannot match.
           text = string.include?('<br') ? string.gsub(%r{<br\s*/?>}, "\n") : string

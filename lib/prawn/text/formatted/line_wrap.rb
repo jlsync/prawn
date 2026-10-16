@@ -60,7 +60,7 @@ module Prawn
           # rubocop: disable Lint/AssignmentInCondition
           while fragment = @arranger.next_string
             # rubocop: enable Lint/AssignmentInCondition
-            @fragment_output = +''
+            @fragment_output = ''
 
             fragment.lstrip! if first_fragment_on_this_line?(fragment)
             next if empty_line?(fragment)
@@ -112,6 +112,36 @@ module Prawn
             @newline_encountered = true
             false
           else
+            if fragment.ascii_only?
+              if !fragment.include?(' ') && !fragment.include?('-') && !fragment.include?("\t")
+                segment_width = @document.width_of(fragment, kerning_options)
+                if @accumulated_width + segment_width <= @width
+                  @accumulated_width += segment_width
+                  @fragment_output = fragment
+                  fragment_finished(fragment)
+                  return true
+                else
+                  if @accumulated_width.zero? && @line_contains_more_than_one_word
+                    @line_contains_more_than_one_word = false
+                  end
+                  @fragment_output = +''
+                  end_of_the_line_reached(fragment)
+                  fragment_finished(fragment)
+                  return false
+                end
+              elsif (@arranger.finished? || next_string_newline?) && !fragment.end_with?(' ', "\t")
+                full_width = @document.width_of(fragment, kerning_options)
+                if @accumulated_width + full_width + @document.font_size <= @width
+                  @accumulated_width += full_width
+                  @fragment_output = fragment
+                  fragment_finished(fragment)
+                  return true
+                end
+              end
+            end
+
+            @fragment_output = +''
+
             # Every segment yielded by the scan shares the fragment's encoding,
             # so the pattern and the single-character sentinels are resolved
             # once per fragment rather than once per token.
@@ -127,7 +157,7 @@ module Prawn
                 if segment == zero_width_space
                   0
                 else
-                  @document.width_of(segment, kerning: @kerning)
+                  @document.width_of(segment, kerning_options)
                 end
 
               if @accumulated_width + segment_width <= @width
@@ -210,10 +240,10 @@ module Prawn
 
         def soft_hyphen_cached(encoding)
           # Called per token: memoize per instance in front of the shared cache.
-          @soft_hyphen_cache ||= {}
-          return @soft_hyphen_cache[encoding] if @soft_hyphen_cache.key?(encoding)
+          return @soft_hyphen_char if @soft_hyphen_encoding.equal?(encoding)
 
-          @soft_hyphen_cache[encoding] =
+          @soft_hyphen_encoding = encoding
+          @soft_hyphen_char =
             encoding_cached(:soft_hyphen, encoding) { soft_hyphen(encoding)&.freeze }
         end
 
@@ -236,10 +266,10 @@ module Prawn
 
         def zero_width_space_cached(encoding)
           # Called per token: memoize per instance in front of the shared cache.
-          @zws_cache ||= {}
-          return @zws_cache[encoding] if @zws_cache.key?(encoding)
+          return @zws_char if @zws_encoding.equal?(encoding)
 
-          @zws_cache[encoding] =
+          @zws_encoding = encoding
+          @zws_char =
             encoding_cached(:zero_width_space, encoding) { zero_width_space(encoding)&.freeze }
         end
 
@@ -270,9 +300,17 @@ module Prawn
             return w
           end
 
-          w = @document.width_of(shy_char, kerning: @kerning)
+          w = @document.width_of(shy_char, kerning_options)
           @soft_hyphen_width_cache[key] = w
           w
+        end
+
+        def kerning_options
+          opts = @kerning_options
+          if opts.nil? || opts.size != 1 || opts[:kerning] != @kerning
+            opts = @kerning_options = { kerning: @kerning }
+          end
+          opts
         end
 
         def line_empty?
@@ -316,13 +354,17 @@ module Prawn
           fragment, normalized_soft_hyphen = nil
         )
           remaining_text =
-            # Two Integer arguments rather than a Range: a Range with variable
-            # endpoints is allocated per call, and this halves the objects this
-            # line produces. A literal Range (e.g. `0..-2` elsewhere in the text
-            # stack) is optimised by Ruby and does not need this.
-            fragment.slice(
-              @fragment_output.length, fragment.length - @fragment_output.length,
-            )
+            if @fragment_output.length == fragment.length
+              ''
+            else
+              # Two Integer arguments rather than a Range: a Range with variable
+              # endpoints is allocated per call, and this halves the objects this
+              # line produces. A literal Range (e.g. `0..-2` elsewhere in the text
+              # stack) is optimised by Ruby and does not need this.
+              fragment.slice(
+                @fragment_output.length, fragment.length - @fragment_output.length,
+              )
+            end
           if line_finished? && line_empty? && @fragment_output.empty? &&
               fragment.match?(/\S/)
             raise Prawn::Errors::CannotFit
@@ -350,7 +392,7 @@ module Prawn
         # {#pull_preceding_fragment_to_join_this_one?} branch, so they are
         # computed lazily rather than for every fragment.
         def remember_this_fragment_for_backward_looking_ops
-          @previous_fragment = @fragment_output.dup
+          @previous_fragment = @fragment_output
         end
 
         def previous_fragment_ended_with_breakable?

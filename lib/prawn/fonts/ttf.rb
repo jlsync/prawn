@@ -198,19 +198,27 @@ module Prawn
       # @return [Number]
       def compute_width_of(string, options = {})
         scale = (options[:size] || size) / 1000.0
-        if options[:kerning]
-          units =
-            kern(string).sum { |elt|
-              if elt.is_a?(Numeric)
-                -elt
-              else
-                elt.sum { |code| character_width_by_code(code) }
-              end
-            }
-          units * scale
+        char_widths = @char_widths
+        if options[:kerning] && has_kerning_data?
+          total = 0
+          pairs = kern_pair_index
+          sf = scale_factor
+          cmap_table = cmap
+          last_glyph = nil
+
+          string.each_codepoint do |r|
+            glyph = cmap_table[r]
+            if last_glyph && (kern = pairs[(last_glyph << 16) | glyph])
+              total += kern * sf
+            end
+            total += char_widths[r] || character_width_by_code(r)
+            last_glyph = glyph
+          end
+
+          total * scale
         else
           total = 0
-          string.each_codepoint { |code| total += character_width_by_code(code) }
+          string.each_codepoint { |code| total += char_widths[code] || character_width_by_code(code) }
           total * scale
         end
       end
@@ -239,12 +247,19 @@ module Prawn
       # @option options :kerning [Boolean]
       # @return [Array<Array(0, (String, Array)>]
       def encode_text(text, options = {})
-        text = text.chomp
+        text = text.chomp if text.end_with?("\n", "\r")
 
         if options[:kerning]
+          kerned = kern(text)
+          if kerned.length == 1
+            return @subsets.encode(kerned[0])
+          elsif kerned.empty?
+            return []
+          end
+
           last_subset = nil
           result = []
-          kern(text).each do |element|
+          kerned.each do |element|
             if element.is_a?(Numeric)
               next if result.empty?
 
@@ -384,8 +399,7 @@ module Prawn
       # @param char [String]
       # @return [Boolean]
       def glyph_present?(char)
-        code = char.codepoints.first
-        cmap[code].positive?
+        cmap[char.ord].positive?
       end
 
       # Returns the number of characters in `str` (a UTF-8-encoded string).
@@ -408,26 +422,28 @@ module Prawn
       # kern amount to inject at that position. Otherwise, the element
       # is an array of UTF-16 characters.
       def kern(string)
+        return [] if string.empty?
+        return [string.unpack('U*')] unless has_kerning_data?
+
         a = []
         pairs = kern_pair_index
+        sf = scale_factor
+        cmap_table = cmap
+        current_run = nil
         last_glyph = nil
 
         string.each_codepoint do |r|
-          if a.empty?
-            a << [r]
+          glyph = cmap_table[r]
+          if current_run.nil?
+            current_run = [r]
+            a << current_run
+          elsif (kern = pairs[(last_glyph << 16) | glyph])
+            current_run = [r]
+            a << -(kern * sf) << current_run
           else
-            # Look up each glyph once and reuse it as the left side of the
-            # next pair.
-            last_glyph ||= cmap[a.last.last]
-            glyph = cmap[r]
-            if (kern = pairs[(last_glyph << 16) | glyph])
-              kern *= scale_factor
-              a << -kern << [r]
-            else
-              a.last << r
-            end
-            last_glyph = glyph
+            current_run << r
           end
+          last_glyph = glyph
         end
 
         a
@@ -437,8 +453,12 @@ module Prawn
       # so that lookups don't allocate an Array per character.
       def kern_pair_index
         @kern_pair_index ||=
-          kern_pairs_table.each_with_object({}) do |((left, right), kern), h|
-            h[(left << 16) | right] = kern
+          begin
+            index = {}
+            kern_pairs_table.each do |(left, right), kern|
+              index[(left << 16) | right] = kern
+            end
+            index
           end
       end
 
@@ -623,8 +643,7 @@ module Prawn
           font.cmap.unicode.first
           .code_map
           .reject { |cid, gid| gid.zero? || (0xd800..0xdfff).cover?(cid) }
-          .invert
-          .sort.to_h,
+          .invert,
           2, # Identity-H is a 2-byte encoding
         ).generate
         to_unicode.stream.compress! if @document.compression_enabled?

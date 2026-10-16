@@ -14,7 +14,7 @@ module Prawn
           @line_wrap = Prawn::Text::Formatted::LineWrap.new
           @arranger = Prawn::Text::Formatted::Arranger.new(
             @document,
-            kerning: options[:kerning],
+            @options || options,
           )
           @disable_wrap_by_char = options[:disable_wrap_by_char]
         end
@@ -64,7 +64,12 @@ module Prawn
 
             stop ||= @single_line || @arranger.finished?
           end
-          @text = @printed_lines.join("\n")
+          @text =
+            case @printed_lines.length
+            when 0 then +''
+            when 1 then @printed_lines[0]
+            else @printed_lines.join("\n")
+            end
           @everything_printed = @arranger.finished?
           @arranger.unconsumed
         end
@@ -73,39 +78,83 @@ module Prawn
 
         def print_line
           @nothing_printed = false
-          printed_fragments = []
-          fragments_this_line = []
-
           word_spacing = word_spacing_for_this_line
-          @arranger.fragments.each do |fragment|
+          fragments = @arranger.fragments
+
+          if @direction == :rtl
+            printed_fragments = []
+            fragments_this_line = []
+
+            fragments.each do |fragment|
+              fragment.word_spacing = word_spacing
+              if fragment.text == "\n"
+                printed_fragments << "\n" if @printed_lines.last == ''
+                break
+              end
+              printed_fragments << fragment.text
+              fragments_this_line << fragment
+            end
+            fragments.clear
+
+            accumulated_width = 0
+            fragments_this_line.reverse!
+            fragments_this_line.each do |fragment_this_line|
+              fragment_this_line.default_direction = @direction
+              format_and_draw_fragment(
+                fragment_this_line,
+                accumulated_width,
+                @line_wrap.width,
+                word_spacing,
+              )
+              accumulated_width += fragment_this_line.width
+            end
+
+            out = +''
+            printed_fragments.each do |s|
+              out << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
+            end
+            @printed_lines << out
+          elsif fragments.length == 1
+            fragment = fragments[0]
+            fragments.clear
             fragment.word_spacing = word_spacing
             if fragment.text == "\n"
-              printed_fragments << "\n" if @printed_lines.last == ''
-              break
+              @printed_lines << (@printed_lines.last == '' ? +"\n" : +'')
+            else
+              fragment.default_direction = @direction
+              format_and_draw_fragment(
+                fragment,
+                0,
+                @line_wrap.width,
+                word_spacing,
+              )
+              s = fragment.text
+              @printed_lines << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
             end
-            printed_fragments << fragment.text
-            fragments_this_line << fragment
+          else
+            out = +''
+            accumulated_width = 0
+            line_width = @line_wrap.width
+            fragments.each do |fragment|
+              fragment.word_spacing = word_spacing
+              if fragment.text == "\n"
+                out << "\n" if @printed_lines.last == ''
+                break
+              end
+              fragment.default_direction = @direction
+              format_and_draw_fragment(
+                fragment,
+                accumulated_width,
+                line_width,
+                word_spacing,
+              )
+              accumulated_width += fragment.width
+              s = fragment.text
+              out << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
+            end
+            fragments.clear
+            @printed_lines << out
           end
-          @arranger.fragments.replace([])
-
-          accumulated_width = 0
-          fragments_this_line.reverse! if @direction == :rtl
-          fragments_this_line.each do |fragment_this_line|
-            fragment_this_line.default_direction = @direction
-            format_and_draw_fragment(
-              fragment_this_line,
-              accumulated_width,
-              @line_wrap.width,
-              word_spacing,
-            )
-            accumulated_width += fragment_this_line.width
-          end
-
-          out = +''
-          printed_fragments.each do |s|
-            out << (s.encoding == ::Encoding::UTF_8 ? s : s.dup.force_encoding(::Encoding::UTF_8))
-          end
-          @printed_lines << out
         end
 
         def word_spacing_for_this_line
@@ -147,7 +196,7 @@ module Prawn
           @ascender = 0
           @baseline_y = 0
 
-          @printed_lines = []
+          (@printed_lines ||= []).clear
           @nothing_printed = true
           @everything_printed = false
         end

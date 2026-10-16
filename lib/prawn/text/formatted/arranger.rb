@@ -40,13 +40,22 @@ module Prawn
         # The following present only for testing purposes
         attr_reader :unconsumed
         attr_reader :fragments
-        attr_reader :current_format_state
 
-        def initialize(document, options = {})
+        def initialize(document, options = nil)
           @document = document
           @fragments = []
           @unconsumed = []
-          @kerning = options[:kerning]
+          @consumed = []
+          @kerning = options && options[:kerning]
+        end
+
+        def current_format_state
+          @current_format_state ||=
+            if @consumed.empty?
+              {}
+            else
+              format_state_without_text(@consumed.last)
+            end
         end
 
         # Number of spaces in the text.
@@ -82,6 +91,13 @@ module Prawn
             raise NotFinalized.new(method: 'line')
           end
 
+          if @fragments.length == 1
+            text = @fragments[0].text
+            return text if text.encoding == ::Encoding::UTF_8
+          elsif @fragments.empty?
+            return +''
+          end
+
           out = +''
           @fragments.each do |fragment|
             text = fragment.text
@@ -107,7 +123,7 @@ module Prawn
           @finalized = true
 
           omit_trailing_whitespace_from_line_width
-          @fragments = []
+          @fragments.clear
           @consumed.each do |hash|
             text = hash[:text]
             format_state = format_state_without_text(hash)
@@ -128,16 +144,22 @@ module Prawn
         # @return [void]
         def format_array=(array)
           initialize_line
-          @unconsumed = []
+          @unconsumed.clear
           array.each do |hash|
             text = hash[:text]
             if text.instance_of?(String) && text.encoding.ascii_compatible? &&
                 text.ascii_only? && !text.include?("\n")
               # Wrapping mutates these strings, so retain scan's copy semantics.
-              @unconsumed << hash.merge(text: text.dup) unless text.empty?
+              unless text.empty?
+                copy = hash.dup
+                copy[:text] = text.dup
+                @unconsumed << copy
+              end
             else
               text.scan(/[^\n]+|\n/) do |line|
-                @unconsumed << hash.merge(text: line)
+                copy = hash.dup
+                copy[:text] = line
+                @unconsumed << copy
               end
             end
           end
@@ -152,8 +174,8 @@ module Prawn
           @max_descender = 0
           @max_ascender = 0
 
-          @consumed = []
-          @fragments = []
+          @consumed.clear
+          @fragments.clear
         end
 
         # Were all fragments processed?
@@ -175,8 +197,8 @@ module Prawn
           next_unconsumed_hash = @unconsumed.shift
 
           if next_unconsumed_hash
-            @consumed << next_unconsumed_hash.dup
-            @current_format_state = format_state_without_text(next_unconsumed_hash)
+            @consumed << next_unconsumed_hash
+            @current_format_state = nil
 
             next_unconsumed_hash[:text]
           end
@@ -219,11 +241,16 @@ module Prawn
         # @return [void]
         def apply_font_settings(fragment = nil, &block)
           if fragment.nil?
-            font = current_format_state[:font]
-            size = current_format_state[:size]
-            character_spacing = current_format_state[:character_spacing] ||
-              @document.character_spacing
-            styles = current_format_state[:styles]
+            state = @current_format_state || @consumed.last
+            if state
+              font = state[:font]
+              size = state[:size]
+              character_spacing = state[:character_spacing] ||
+                @document.character_spacing
+              styles = state[:styles]
+            else
+              character_spacing = @document.character_spacing
+            end
           else
             font = fragment.font
             size = fragment.size
@@ -259,20 +286,21 @@ module Prawn
         def update_last_string(printed, unprinted, normalized_soft_hyphen = nil)
           return if printed.nil?
 
+          unless unprinted.empty?
+            state = @current_format_state ? @current_format_state.dup : format_state_without_text(@consumed.last)
+            state[:text] = unprinted
+            @unconsumed.unshift(state)
+          end
+
           if printed.empty?
             @consumed.pop
+            @current_format_state = nil
           else
             @consumed.last[:text] = printed
             if normalized_soft_hyphen
               @consumed.last[:normalized_soft_hyphen] = normalized_soft_hyphen
             end
           end
-
-          unless unprinted.empty?
-            @unconsumed.unshift(@current_format_state.merge(text: unprinted))
-          end
-
-          load_previous_format_state if printed.empty?
         end
 
         # Get the next fragment.
@@ -296,7 +324,9 @@ module Prawn
           while fragment = retrieve_fragment
             # rubocop: enable Lint/AssignmentInCondition
             fragment.include_trailing_white_space!
-            new_unconsumed << fragment.format_state.merge(text: fragment.text)
+            copy = fragment.format_state.dup
+            copy[:text] = fragment.text
+            new_unconsumed << copy
           end
           @unconsumed = new_unconsumed.concat(@unconsumed)
         end
@@ -324,12 +354,7 @@ module Prawn
         private
 
         def load_previous_format_state
-          @current_format_state =
-            if @consumed.empty?
-              {}
-            else
-              format_state_without_text(@consumed.last)
-            end
+          @current_format_state = nil
         end
 
         def format_state_without_text(hash)
@@ -377,7 +402,7 @@ module Prawn
           @consumed.reverse_each do |hash|
             if hash[:text] == "\n"
               break
-            elsif hash[:text].strip.empty? && @consumed.length > 1
+            elsif @consumed.length > 1 && hash[:text].strip.empty?
               # this entire fragment is trailing white space
               hash[:exclude_trailing_white_space] = true
             else
@@ -391,9 +416,13 @@ module Prawn
 
         def fragment_measurements=(fragment)
           apply_font_settings(fragment) do
+            opts = @kerning_options
+            if opts.nil? || opts.size != 1 || opts[:kerning] != @kerning
+              opts = @kerning_options = { kerning: @kerning }
+            end
             fragment.width = @document.width_of(
               fragment.text,
-              kerning: @kerning,
+              opts,
             )
             fragment.line_height = @document.font.height
             fragment.descender = @document.font.descender

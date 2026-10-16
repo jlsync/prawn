@@ -162,7 +162,7 @@ module Prawn
       #   The minimum font size to use when `:overflow` is set to `:shrink_to_fit`
       #   (that is the font size will not be reduced to less than this value, even
       #   if it means that some text will be cut off).
-      def initialize(string, options = {})
+      def initialize(string, options = EMPTY_FLAGS)
         super([{ text: string }], options)
       end
 
@@ -183,8 +183,10 @@ module Prawn
       #   If no font family is defined for the current font.
       # @raise [Prawn::Errors::CannotFit]
       #   If not wide enough to print any text.
-      def render(flags = {})
+      def render(flags = EMPTY_FLAGS)
         leftover = super
+        return +'' if leftover.empty?
+
         leftover.map { |hash| hash[:text] }.join
       end
     end

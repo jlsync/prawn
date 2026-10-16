@@ -182,7 +182,7 @@ module Prawn
         def default_direction=(direction)
           unless @format_state[:direction]
             @format_state[:direction] = direction
-            @text = process_text(@original_text)
+            @text = process_text(@original_text) if direction == :rtl
           end
         end
 
@@ -326,19 +326,45 @@ module Prawn
           string = strip_zero_width_spaces(text)
 
           if exclude_trailing_white_space?
-            string = string.rstrip
+            if string.equal?(text)
+              string = string.rstrip
+            else
+              string.rstrip!
+            end
 
             if soft_hyphens_need_processing?(string)
-              string = process_soft_hyphens(string[0..-2]) + string[-1..]
+              shy = normalized_soft_hyphen
+              if string.encoding != shy.encoding
+                string = string.dup if string.equal?(text)
+                string.force_encoding(shy.encoding)
+              end
+              if string.include?(shy)
+                string = process_soft_hyphens(string[0..-2]) + string[-1..]
+              end
             end
           elsif soft_hyphens_need_processing?(string)
-            string = process_soft_hyphens(string)
+            shy = normalized_soft_hyphen
+            if string.encoding != shy.encoding
+              string = string.dup if string.equal?(text)
+              string.force_encoding(shy.encoding)
+            end
+            if string.include?(shy)
+              string = string.dup if string.equal?(text)
+              string.gsub!(shy, '')
+            elsif string.equal?(text)
+              string = string.dup
+            end
           end
 
           if direction == :rtl
-            string.reverse
+            if string.equal?(text)
+              string.reverse
+            else
+              string.reverse!
+              string
+            end
           else
-            string
+            string.equal?(text) ? string.dup : string
           end
         end
 
@@ -367,12 +393,8 @@ module Prawn
         end
 
         def strip_zero_width_spaces(string)
-          if string.encoding == ::Encoding::UTF_8
-            if string.include?(Prawn::Text::ZWSP)
-              string.gsub(Prawn::Text::ZWSP, '')
-            else
-              string.dup
-            end
+          if string.encoding == ::Encoding::UTF_8 && string.include?(Prawn::Text::ZWSP)
+            string.gsub(Prawn::Text::ZWSP, '')
           else
             string
           end
