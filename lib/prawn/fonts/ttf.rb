@@ -199,8 +199,8 @@ module Prawn
       def compute_width_of(string, options = {})
         scale = (options[:size] || size) / 1000.0
         char_widths = @char_widths
+        total = 0
         if options[:kerning] && has_kerning_data?
-          total = 0
           pairs = kern_pair_index
           sf = scale_factor
           cmap_table = cmap
@@ -214,13 +214,10 @@ module Prawn
             total += char_widths[r] || character_width_by_code(r)
             last_glyph = glyph
           end
-
-          total * scale
         else
-          total = 0
           string.each_codepoint { |code| total += char_widths[code] || character_width_by_code(code) }
-          total * scale
         end
+        total * scale
       end
 
       # The font bbox.

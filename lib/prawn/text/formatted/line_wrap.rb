@@ -105,82 +105,88 @@ module Prawn
         # the line
         #
         def add_fragment_to_line(fragment)
-          case fragment
-          when ''
-            true
-          when "\n"
+          return true if fragment.empty?
+
+          if fragment == "\n"
             @newline_encountered = true
-            false
-          else
-            if fragment.ascii_only?
-              if !fragment.include?(' ') && !fragment.include?('-') && !fragment.include?("\t")
-                segment_width = @document.width_of(fragment, kerning_options)
-                if @accumulated_width + segment_width <= @width
-                  @accumulated_width += segment_width
-                  @fragment_output = fragment
-                  fragment_finished(fragment)
-                  return true
-                else
-                  if @accumulated_width.zero? && @line_contains_more_than_one_word
-                    @line_contains_more_than_one_word = false
-                  end
-                  @fragment_output = +''
-                  end_of_the_line_reached(fragment)
-                  fragment_finished(fragment)
-                  return false
-                end
-              elsif (@arranger.finished? || next_string_newline?) && !fragment.end_with?(' ', "\t")
-                full_width = @document.width_of(fragment, kerning_options)
-                if @accumulated_width + full_width + @document.font_size <= @width
-                  @accumulated_width += full_width
-                  @fragment_output = fragment
-                  fragment_finished(fragment)
-                  return true
-                end
-              end
-            end
-
-            @fragment_output = +''
-
-            # Every segment yielded by the scan shares the fragment's encoding,
-            # so the pattern and the single-character sentinels are resolved
-            # once per fragment rather than once per token.
-            encoding = fragment.encoding
-            pattern = scan_pattern(encoding)
-            zero_width_space = zero_width_space_cached(encoding)
-            soft_hyphen = soft_hyphen_cached(encoding)
-
-            # Scan lazily: only the tokens that fit on this line are needed, so
-            # avoid tokenizing the (possibly long) remainder of the fragment.
-            fragment.scan(pattern) do |segment|
-              segment_width =
-                if segment == zero_width_space
-                  0
-                else
-                  @document.width_of(segment, kerning_options)
-                end
-
-              if @accumulated_width + segment_width <= @width
-                @accumulated_width += segment_width
-                # #end_with? is equivalent to comparing the last character here
-                # but does not allocate a one-character string per token.
-                if soft_hyphen && segment.end_with?(soft_hyphen)
-                  @accumulated_width -= soft_hyphen_width_cached(soft_hyphen)
-                end
-                @fragment_output << segment
-              else
-                if @accumulated_width.zero? && @line_contains_more_than_one_word
-                  @line_contains_more_than_one_word = false
-                end
-                end_of_the_line_reached(segment)
-                fragment_finished(fragment)
-                return false
-              end
-            end
-
-            fragment_finished(fragment)
-            true
+            return false
           end
+
+          if fragment.ascii_only?
+            result = try_fast_path_ascii_fragment(fragment)
+            return result unless result.nil?
+          end
+
+          @fragment_output = +''
+
+          # Every segment yielded by the scan shares the fragment's encoding,
+          # so the pattern and the single-character sentinels are resolved
+          # once per fragment rather than once per token.
+          encoding = fragment.encoding
+          pattern = scan_pattern(encoding)
+          zero_width_space = zero_width_space_cached(encoding)
+          soft_hyphen = soft_hyphen_cached(encoding)
+
+          # Scan lazily: only the tokens that fit on this line are needed, so
+          # avoid tokenizing the (possibly long) remainder of the fragment.
+          fragment.scan(pattern) do |segment|
+            segment_width =
+              if segment == zero_width_space
+                0
+              else
+                @document.width_of(segment, kerning_options)
+              end
+
+            if @accumulated_width + segment_width <= @width
+              @accumulated_width += segment_width
+              # #end_with? is equivalent to comparing the last character here
+              # but does not allocate a one-character string per token.
+              if soft_hyphen && segment.end_with?(soft_hyphen)
+                @accumulated_width -= soft_hyphen_width_cached(soft_hyphen)
+              end
+              @fragment_output << segment
+            else
+              if @accumulated_width.zero? && @line_contains_more_than_one_word
+                @line_contains_more_than_one_word = false
+              end
+              end_of_the_line_reached(segment)
+              fragment_finished(fragment)
+              return false
+            end
+          end
+
+          fragment_finished(fragment)
+          true
+        end
+
+        def try_fast_path_ascii_fragment(fragment)
+          if !fragment.include?(' ') && !fragment.include?('-') && !fragment.include?("\t")
+            segment_width = @document.width_of(fragment, kerning_options)
+            if @accumulated_width + segment_width <= @width
+              @accumulated_width += segment_width
+              @fragment_output = fragment
+              fragment_finished(fragment)
+              return true
+            end
+
+            if @accumulated_width.zero? && @line_contains_more_than_one_word
+              @line_contains_more_than_one_word = false
+            end
+            @fragment_output = +''
+            end_of_the_line_reached(fragment)
+            fragment_finished(fragment)
+            return false
+          elsif (@arranger.finished? || next_string_newline?) && !fragment.end_with?(' ', "\t")
+            full_width = @document.width_of(fragment, kerning_options)
+            if @accumulated_width + full_width + @document.font_size <= @width
+              @accumulated_width += full_width
+              @fragment_output = fragment
+              fragment_finished(fragment)
+              return true
+            end
+          end
+
+          nil
         end
 
         # The pattern used to determine chunks of text to place on a given line

@@ -49,6 +49,9 @@ module Prawn
           @kerning = options && options[:kerning]
         end
 
+        # Format state of the current fragment.
+        #
+        # @return [Hash]
         def current_format_state
           @current_format_state ||=
             if @consumed.empty?

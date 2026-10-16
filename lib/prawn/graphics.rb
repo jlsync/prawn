@@ -100,7 +100,8 @@ module Prawn
         x2, y2 = map_to_absolute(b1)
         x3, y3 = map_to_absolute(dest)
         renderer.add_content(
-          "#{real_param(x1)} #{real_param(y1)} #{real_param(x2)} #{real_param(y2)} #{real_param(x3)} #{real_param(y3)} c",
+          "#{real_param(x1)} #{real_param(y1)} #{real_param(x2)} " \
+            "#{real_param(y2)} #{real_param(x3)} #{real_param(y3)} c",
         )
       else
         curve_points = real_params(

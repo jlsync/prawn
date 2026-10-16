@@ -531,7 +531,7 @@ module Prawn
 
         current = absolute_top - @document.y
         stretched = Float(@stretched_height || 0.0)
-        @stretched_height = current >= stretched ? current : stretched
+        @stretched_height = current >= stretched ? current : stretched # rubocop: disable Style/MinMaxComparison
       end
 
       # An alias for {absolute_left}.
