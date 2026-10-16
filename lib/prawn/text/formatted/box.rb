@@ -190,10 +190,12 @@ module Prawn
         #   The minimum font size to use when `:overflow` is set to
         #   `:shrink_to_fit` (that is the font size will not be reduced to less
         #   than this value, even if it means that some text will be cut off).
-        def initialize(formatted_text, options = {})
+        EMPTY_FLAGS = {}.freeze
+        private_constant :EMPTY_FLAGS
+
+        def initialize(formatted_text, options = EMPTY_FLAGS)
           @inked = false
-          Prawn.verify_options(valid_options, options)
-          options = options.dup
+          Prawn.verify_options(valid_options, options) if Prawn.debug || $DEBUG
 
           self.class.extensions.reverse_each { |e| extend(e) }
 
@@ -207,9 +209,12 @@ module Prawn
           @direction = options[:direction] || @document.text_direction
           @fallback_fonts = options[:fallback_fonts] ||
             @document.fallback_fonts
-          @at = (
-            options[:at] || [@document.bounds.left, @document.bounds.top]
-          ).dup
+          @at =
+            if (at = options[:at])
+              at.dup
+            else
+              [@document.bounds.left, @document.bounds.top]
+            end
           @width = options[:width] ||
             (@document.bounds.right - @at[0])
           @height = options[:height] || default_height
@@ -238,11 +243,10 @@ module Prawn
             @overflow = :truncate
           end
           @min_font_size = options[:min_font_size] || 5
-          if options[:kerning].nil?
-            options[:kerning] = @document.default_kerning?
-          end
+          kerning = options[:kerning]
+          kerning = @document.default_kerning? if kerning.nil?
           @options = {
-            kerning: options[:kerning],
+            kerning: kerning,
             size: options[:size],
             style: options[:style],
           }
@@ -268,8 +272,8 @@ module Prawn
         #   If no font family is defined for the current font.
         # @raise [Prawn::Errors::CannotFit]
         #   If not wide enough to print any text.
-        def render(flags = {})
-          unprinted_text = []
+        def render(flags = EMPTY_FLAGS)
+          unprinted_text = nil
 
           @document.save_font do
             @document.character_spacing(@character_spacing) do
@@ -294,8 +298,12 @@ module Prawn
             end
           end
 
+          return [] if unprinted_text.empty?
+
           unprinted_text.map do |e|
-            e.merge(text: @document.font.to_utf8(e[:text]))
+            copy = e.dup
+            copy[:text] = @document.font.to_utf8(e[:text])
+            copy
           end
         end
 
@@ -473,8 +481,6 @@ module Prawn
         end
 
         def analyze_glyphs_for_fallback_font_support(hash)
-          font_glyph_pairs = []
-
           original_font = @document.font.family
           fragment_font = hash[:font] || original_font
           fragment_font_options =
@@ -485,28 +491,38 @@ module Prawn
           # all fonts
           fallback_fonts << fragment_font
 
+          fragments = []
+          fragment = nil
+          current_font = nil
+          no_explicit_font = hash[:font].nil?
+
           @document.save_font do
             hash[:text].each_char do |char|
-              font_glyph_pairs << [
+              font =
                 find_font_for_this_glyph(
                   char,
                   fragment_font,
-                  fallback_fonts.dup,
+                  fallback_fonts,
                   fragment_font_options,
-                ),
-                char,
-              ]
+                )
+              # Don't add a :font to fragments if it wasn't there originally
+              font = nil if no_explicit_font && font == original_font
+
+              if font != current_font || fragments.empty?
+                current_font = font
+                fragment = hash.dup
+                fragment[:text] = char
+                fragment[:font] = font unless font.nil?
+                fragments << fragment
+              else
+                # Append in place: falling back builds one fragment per run of
+                # glyphs sharing a font, and those runs can be long.
+                fragment[:text] << char
+              end
             end
           end
 
-          # Don't add a :font to fragments if it wasn't there originally
-          if hash[:font].nil?
-            font_glyph_pairs.each do |pair|
-              pair[0] = nil if pair[0] == original_font
-            end
-          end
-
-          form_fragments_from_like_font_glyph_pairs(font_glyph_pairs, hash)
+          fragments
         end
 
         def font_style(styles)
@@ -525,10 +541,12 @@ module Prawn
 
         def find_font_for_this_glyph(char, current_font, fallback_fonts, current_font_options = {})
           @document.font(current_font, current_font_options)
-          if fallback_fonts.empty? || @document.font.glyph_present?(char)
-            current_font
-          else
-            find_font_for_this_glyph(char, fallback_fonts.shift, fallback_fonts, current_font_options)
+          return current_font if fallback_fonts.empty? || @document.font.glyph_present?(char)
+
+          last_index = fallback_fonts.length - 1
+          fallback_fonts.each_with_index do |font, index|
+            @document.font(font, current_font_options)
+            return font if index == last_index || @document.font.glyph_present?(char)
           end
         end
 
@@ -663,6 +681,8 @@ module Prawn
         end
 
         def draw_fragment_underlays(fragment)
+          return unless fragment.format_state[:callback]
+
           fragment.callback_objects.each do |obj|
             obj.render_behind(fragment) if obj.respond_to?(:render_behind)
           end
@@ -673,6 +693,8 @@ module Prawn
           draw_fragment_overlay_link(fragment)
           draw_fragment_overlay_anchor(fragment)
           draw_fragment_overlay_local(fragment)
+          return unless fragment.format_state[:callback]
+
           fragment.callback_objects.each do |obj|
             obj.render_in_front(fragment) if obj.respond_to?(:render_in_front)
           end

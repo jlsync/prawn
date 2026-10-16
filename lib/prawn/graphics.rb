@@ -88,16 +88,28 @@ module Prawn
     # @option options :bounds [Array(Array(Number, Number), Array(Number, Number))]
     # @return [void]
     def curve_to(dest, options = {})
-      options[:bounds] || raise(
+      bounds = options[:bounds] || raise(
         Prawn::Errors::InvalidGraphicsPath,
         'Bounding points for bezier curve must be specified as :bounds => [[x1,y1],[x2,y2]]',
       )
 
-      curve_points = real_params(
-        (options[:bounds] << dest).flat_map { |e| map_to_absolute(e) },
-      )
+      if bounds.length == 2
+        b0, b1 = bounds
+        bounds << dest
+        x1, y1 = map_to_absolute(b0)
+        x2, y2 = map_to_absolute(b1)
+        x3, y3 = map_to_absolute(dest)
+        renderer.add_content(
+          "#{real_param(x1)} #{real_param(y1)} #{real_param(x2)} " \
+            "#{real_param(y2)} #{real_param(x3)} #{real_param(y3)} c",
+        )
+      else
+        curve_points = real_params(
+          (bounds << dest).flat_map { |e| map_to_absolute(e) },
+        )
 
-      renderer.add_content("#{curve_points} c")
+        renderer.add_content("#{curve_points} c")
+      end
     end
 
     # Draws a rectangle given `point`, `width and `height`. The rectangle is
@@ -112,9 +124,10 @@ module Prawn
     # @return [void]
     def rectangle(point, width, height)
       x, y = map_to_absolute(point)
-      box = real_params([x, y - height, width, height])
 
-      renderer.add_content("#{box} re")
+      renderer.add_content(
+        "#{real_param(x)} #{real_param(y - height)} #{real_param(width)} #{real_param(height)} re",
+      )
     end
 
     # Draws a rounded rectangle given `point`, `width`, `height`, and `radius`
@@ -338,9 +351,10 @@ module Prawn
     # @return [void]
     def polygon(*points)
       move_to(points[0])
-      (points[1..] << points[0]).each do |point|
-        line_to(*point)
+      1.upto(points.length - 1) do |i|
+        line_to(*points[i])
       end
+      line_to(*points[0])
       # close the path
       renderer.add_content('h')
     end
@@ -786,7 +800,15 @@ module Prawn
     # The cached string is frozen because it may be shared between callers;
     # callers only interpolate it.
     def real_param(num)
-      return "#{num}.0" if num.instance_of?(Integer)
+      if num.instance_of?(Integer)
+        int_cache = (@int_param_cache ||= {})
+        converted = int_cache[num]
+        return converted if converted
+
+        converted = "#{num}.0".freeze
+        int_cache[num] = converted if int_cache.size < REAL_PARAM_CACHE_SIZE
+        return converted
+      end
 
       unless num.instance_of?(Float)
         return PDF::Core.real(num)
@@ -817,7 +839,17 @@ module Prawn
     end
 
     def write_line_width
-      renderer.add_content("#{current_line_width} w")
+      width = current_line_width
+      cmd =
+        if width.eql?(1)
+          '1 w'
+        elsif width.eql?(@cached_line_width_val)
+          @cached_line_width_cmd
+        else
+          @cached_line_width_val = width
+          @cached_line_width_cmd = -"#{width} w"
+        end
+      renderer.add_content(cmd)
     end
 
     def map_to_absolute(*point)
@@ -838,7 +870,14 @@ module Prawn
     # Returns the coordinates for a point on a line that is a given distance
     # away from the second point defining the line segement
     def point_on_line(distance_from_end, *points)
-      x0, y0, x1, y1 = points.flatten
+      if points.length == 2 &&
+          points[0].instance_of?(Array) && points[1].instance_of?(Array) &&
+          points[0].length == 2 && points[1].length == 2
+        x0, y0 = points[0]
+        x1, y1 = points[1]
+      else
+        x0, y0, x1, y1 = points.flatten
+      end
       length = Math.sqrt(((x1 - x0)**2) + ((y1 - y0)**2))
       p = (length - distance_from_end) / length
       xr = x0 + (p * (x1 - x0))

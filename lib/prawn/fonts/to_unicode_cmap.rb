@@ -61,29 +61,32 @@ module Prawn
 
         short_spans, long_spans = all_spans.partition { |span| span[0] == :short }
 
+        hex_width = code_space_size * 2
+        fully_sorted_fmt = "<%0#{hex_width}X><%0#{hex_width}X><%s>"
+        index_sorted_fmt = "<%0#{hex_width}X><%0#{hex_width}X>[%s]"
+        char_fmt = "<%0#{hex_width}X><%s>"
+
         long_spans
           .each_slice(100) do |spans|
             chunks << "#{spans.length} beginbfrange"
 
             spans.each do |type, span|
-              # rubocop: disable Lint/FormatParameterMismatch -- false positive
               case type
               when :fully_sorted
                 chunks << format(
-                  "<%0#{code_space_size * 2}X><%0#{code_space_size * 2}X><%s>",
+                  fully_sorted_fmt,
                   span.first[0],
                   span.last[0],
                   span.first[1].chr(::Encoding::UTF_16BE).unpack1('H*'),
                 )
               when :index_sorted
                 chunks << format(
-                  "<%0#{code_space_size * 2}X><%0#{code_space_size * 2}X>[%s]",
+                  index_sorted_fmt,
                   span.first[0],
                   span.last[0],
                   span.map { |_, cid| "<#{cid.chr(::Encoding::UTF_16BE).unpack1('H*')}>" }.join,
                 )
               end
-              # rubocop: enable Lint/FormatParameterMismatch
             end
 
             chunks << 'endbfrange'
@@ -95,13 +98,11 @@ module Prawn
             chunks << "#{mapping.length} beginbfchar"
             chunks.concat(
               mapping.map { |(gid, cid)|
-                # rubocop: disable Lint/FormatParameterMismatch -- false positive
                 format(
-                  "<%0#{code_space_size * 2}X><%s>",
+                  char_fmt,
                   gid,
                   cid.chr(::Encoding::UTF_16BE).unpack1('H*'),
                 )
-                # rubocop: enable Lint/FormatParameterMismatch
               },
             )
             chunks << 'endbfchar'

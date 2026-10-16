@@ -13,24 +13,28 @@ class Arcfour
   private_constant :SBOX_TEMPLATE
 
   def initialize(key)
-    # Convert string key to Array of integers
-    key = key.unpack('c*') if key.is_a?(String)
-
     # 1. Allocate an 256 element array of 8 bit bytes to be used as an S-box
     # 2. Initialize the S-box.  Fill each entry first with it's index
     sbox = SBOX_TEMPLATE.dup
 
-    # 3. Fill another array of the same size (256) with the key, repeating
-    #    bytes as necessary.
-    s2 = key * ((255 / key.length) + 1)
-
-    # 4. Set j to zero and initialize the S-box
+    # 3. Set j to zero and initialize the S-box, repeating key bytes as
+    #    necessary without allocating intermediate unpacked/expanded arrays.
     j = 0
     i = 0
-    while i < 256
-      j = (j + sbox[i] + s2[i]) & 0xff
-      sbox[i], sbox[j] = sbox[j], sbox[i]
-      i += 1
+    if key.is_a?(String)
+      key_len = key.bytesize
+      while i < 256
+        j = (j + sbox[i] + key.getbyte(i % key_len)) & 0xff
+        sbox[i], sbox[j] = sbox[j], sbox[i]
+        i += 1
+      end
+    else
+      key_len = key.length
+      while i < 256
+        j = (j + sbox[i] + key[i % key_len]) & 0xff
+        sbox[i], sbox[j] = sbox[j], sbox[i]
+        i += 1
+      end
     end
 
     @sbox = sbox
@@ -45,7 +49,7 @@ class Arcfour
     sbox = @sbox
     i = @i
     j = @j
-    out = String.new(capacity: string.bytesize, encoding: ::Encoding::BINARY)
+    out = ''.b
 
     # The keystream loop is inlined here: this runs once per byte of every
     # encrypted string, and #key_byte would be a method call per byte.
