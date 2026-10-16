@@ -405,6 +405,16 @@ describe Prawn::Font do
       )
     end
 
+    it 'encodes text stripping custom record separators when $RS is changed' do
+      old_sep = $RS
+      begin
+        $RS = ';'
+        expect(font.encode_text('Technology;')).to eq([[0, 'Technology']])
+      ensure
+        $RS = old_sep
+      end
+    end
+
     it 'encodes text with kerning if requested' do
       expect(font.encode_text('To', kerning: true)).to eq(
         [

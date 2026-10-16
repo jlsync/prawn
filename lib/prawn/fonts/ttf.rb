@@ -7,6 +7,7 @@
 #
 # This is free software. Please see the LICENSE and COPYING files for details.
 
+require 'English'
 require 'ttfunk'
 require 'ttfunk/subset_collection'
 require_relative 'to_unicode_cmap'
@@ -244,7 +245,11 @@ module Prawn
       # @option options :kerning [Boolean]
       # @return [Array<Array(0, (String, Array)>]
       def encode_text(text, options = {})
-        text = text.chomp if text.end_with?("\n", "\r")
+        if $RS == "\n"
+          text = text.chomp if text.end_with?("\n", "\r")
+        else
+          text = text.chomp
+        end
 
         if options[:kerning]
           kerned = kern(text)
