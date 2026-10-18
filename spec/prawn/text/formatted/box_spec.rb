@@ -163,6 +163,16 @@ describe Prawn::Text::Formatted::Box do
         pdf.formatted_text_box([{ text: 'hello你好' }], fallback_fonts: %w[Kai NoSuchFont])
       }.to_not(raise_error)
     end
+
+    it 'keeps character iteration for encodings each_codepoint cannot traverse' do
+      # Big5-HKSCS can encode this as a byte sequence that is valid in the
+      # encoding but rejected by String#each_codepoint.
+      text = 'é'.encode('Big5-HKSCS')
+
+      expect {
+        pdf.formatted_text_box([{ text: text }], fallback_fonts: ['Courier'])
+      }.to_not(raise_error)
+    end
   end
 
   describe 'Text::Formatted::Box with :fallback_fonts option that includes an AFM font and Win-Ansi glyph not ' \

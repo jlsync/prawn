@@ -527,35 +527,65 @@ module Prawn
           text_encoding = text.encoding
 
           # Iterating codepoints rather than characters avoids allocating a
-          # one-character String for every glyph. Each fragment's text is built
-          # from the same codepoints in the source encoding, so it is
-          # byte-for-byte what the per-character version produced.
-          text.each_codepoint do |code|
-            font = fragment_font
-            unless primary_font.glyph_present_ord?(code, text_encoding)
-              fallback_candidates ||= []
-              font = fallback_font_for_glyph(
-                code,
-                text_encoding,
-                fallback_candidates,
-                fragment_font,
-                fragment_font_options,
-              )
+          # one-character String for every glyph. It is only safe when the
+          # string is ASCII or valid UTF-8: some encodings (Big5-HKSCS, for
+          # example) contain byte sequences that each_char yields as characters
+          # but each_codepoint rejects as invalid. Fall back to character
+          # iteration for those, which also preserves invalid UTF-8 text.
+          if (text_encoding == ::Encoding::UTF_8 && text.valid_encoding?) || text.ascii_only?
+            text.each_codepoint do |code|
+              font = fragment_font
+              unless primary_font.glyph_present_ord?(code, text_encoding)
+                fallback_candidates ||= []
+                font = fallback_font_for_glyph(
+                  code,
+                  text_encoding,
+                  fallback_candidates,
+                  fragment_font,
+                  fragment_font_options,
+                )
+              end
+
+              # Don't add a :font to fragments if it wasn't there originally
+              font = nil if no_explicit_font && font == original_font
+
+              if font != current_font || fragments.empty?
+                current_font = font
+                fragment = hash.dup
+                fragment[:text] = String.new(encoding: text_encoding) << code
+                fragment[:font] = font unless font.nil?
+                fragments << fragment
+              else
+                # Append in place: falling back builds one fragment per run of
+                # glyphs sharing a font, and those runs can be long.
+                fragment[:text] << code
+              end
             end
+          else
+            text.each_char do |char|
+              font = fragment_font
+              unless primary_font.glyph_present?(char)
+                fallback_candidates ||= []
+                font = fallback_font_for_char(
+                  char,
+                  fallback_candidates,
+                  fragment_font,
+                  fragment_font_options,
+                )
+              end
 
-            # Don't add a :font to fragments if it wasn't there originally
-            font = nil if no_explicit_font && font == original_font
+              # Don't add a :font to fragments if it wasn't there originally
+              font = nil if no_explicit_font && font == original_font
 
-            if font != current_font || fragments.empty?
-              current_font = font
-              fragment = hash.dup
-              fragment[:text] = String.new(encoding: text_encoding) << code
-              fragment[:font] = font unless font.nil?
-              fragments << fragment
-            else
-              # Append in place: falling back builds one fragment per run of
-              # glyphs sharing a font, and those runs can be long.
-              fragment[:text] << code
+              if font != current_font || fragments.empty?
+                current_font = font
+                fragment = hash.dup
+                fragment[:text] = char
+                fragment[:font] = font unless font.nil?
+                fragments << fragment
+              else
+                fragment[:text] << char
+              end
             end
           end
 
@@ -579,6 +609,25 @@ module Prawn
               candidates << candidate
             end
             return candidate[0] if candidate[1].glyph_present_ord?(code, encoding)
+
+            index += 1
+          end
+          fragment_font
+        end
+
+        # Character-based counterpart to {#fallback_font_for_glyph}, used for
+        # encodings where iterating codepoints is unsafe.
+        #
+        def fallback_font_for_char(char, candidates, fragment_font, options)
+          fallback_names = @fallback_fonts
+          index = 0
+          while index < fallback_names.length
+            candidate = candidates[index]
+            unless candidate
+              candidate = [fallback_names[index], @document.find_font(fallback_names[index], options)]
+              candidates << candidate
+            end
+            return candidate[0] if candidate[1].glyph_present?(char)
 
             index += 1
           end
