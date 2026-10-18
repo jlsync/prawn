@@ -373,7 +373,8 @@ module Prawn
     # @option options :rotate [Number] The angle to which to rotate text.
     # @return [void]
     def draw_text!(text, options)
-      unless font.unicode? || font.class.hide_m17n_warning || text.ascii_only?
+      current_font = font
+      unless current_font.unicode? || current_font.class.hide_m17n_warning || text.ascii_only?
         warn(
           "PDF's built-in fonts have very limited support for " \
             "internationalized text.\nIf you need full UTF-8 support, " \
@@ -382,7 +383,7 @@ module Prawn
             "Prawn::Fonts::AFM.hide_m17n_warning = true\n",
         )
 
-        font.class.hide_m17n_warning = true
+        current_font.class.hide_m17n_warning = true
       end
 
       x, y = map_to_absolute(options[:at])

@@ -292,9 +292,10 @@ module Prawn
     #   a font suitcase/collection
     # @return [Font]
     def find_font(name, options = EMPTY_FONT_OPTIONS) # :nodoc:
-      if font_families.key?(name)
+      families = font_families
+      if families.key?(name)
         family = name
-        name = font_families[name][options[:style] || :normal]
+        name = families[name][options[:style] || :normal]
         if name.is_a?(::Hash)
           options = options.merge(name)
           name = options[:file]
@@ -487,6 +488,20 @@ module Prawn
     def normalize_encoding!(str)
       warn('Font#normalize_encoding! is deprecated. Please use non-mutating version Font#normalize_encoding instead.')
       str.dup.replace(normalize_encoding(str))
+    end
+
+    # Does this font have a glyph for the character with the given codepoint?
+    #
+    # Equivalent to calling #glyph_present? on a one-character String, but
+    # without allocating that String.
+    #
+    # @api private
+    # @param code [Integer]
+    # @param encoding [Encoding] the encoding to build the character in when a
+    #   subclass needs the encoded character rather than the codepoint
+    # @return [Boolean]
+    def glyph_present_ord?(code, encoding = ::Encoding::UTF_8)
+      glyph_present?(code.chr(encoding))
     end
 
     # Gets height of font in PDF points at the given font size.
