@@ -150,6 +150,19 @@ describe Prawn::Text::Formatted::Box do
       expect(text.strings[2]).to eq('再见')
       expect(text.strings[3]).to eq('goodbye')
     end
+
+    it 'does not load fallbacks after the first one that covers the glyph' do
+      file = "#{Prawn::DATADIR}/fonts/gkai00mp.ttf"
+      pdf.font_families['Kai'] = {
+        normal: { file: file, font: 'Kai' },
+      }
+
+      # Resolving this fallback would raise UnknownFont, but Kai already covers
+      # the Chinese glyphs, so the search must stop before reaching it.
+      expect {
+        pdf.formatted_text_box([{ text: 'hello你好' }], fallback_fonts: %w[Kai NoSuchFont])
+      }.to_not(raise_error)
+    end
   end
 
   describe 'Text::Formatted::Box with :fallback_fonts option that includes an AFM font and Win-Ansi glyph not ' \

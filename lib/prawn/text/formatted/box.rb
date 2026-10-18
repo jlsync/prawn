@@ -514,11 +514,10 @@ module Prawn
         def analyze_glyphs_for_fallback_font_support(
           hash, original_font, fragment_font, fragment_font_options, primary_font
         )
-          # [name, font object] for each declared fallback, followed by the
-          # fragment font itself: the same search order and unconditional last
-          # resort as before. Built on the first missing glyph, since most text
-          # stays in the primary font and never needs it.
-          fallbacks = nil
+          # [name, font object] pairs for the declared fallbacks, resolved
+          # lazily as the search reaches them. nil until the first missing
+          # glyph, since most text stays in the primary font.
+          fallback_candidates = nil
 
           fragments = []
           fragment = nil
@@ -534,13 +533,14 @@ module Prawn
           text.each_codepoint do |code|
             font = fragment_font
             unless primary_font.glyph_present_ord?(code, text_encoding)
-              fallbacks ||=
-                begin
-                  fonts = @fallback_fonts.map { |name| [name, @document.find_font(name, fragment_font_options)] }
-                  fonts << [fragment_font, primary_font]
-                  fonts
-                end
-              font = fallback_font_for_glyph(code, text_encoding, fallbacks)
+              fallback_candidates ||= []
+              font = fallback_font_for_glyph(
+                code,
+                text_encoding,
+                fallback_candidates,
+                fragment_font,
+                fragment_font_options,
+              )
             end
 
             # Don't add a :font to fragments if it wasn't there originally
@@ -562,20 +562,27 @@ module Prawn
           fragments
         end
 
-        # Given the lazily resolved fallback list (which ends with the fragment
-        # font), return the first font name covering +code+, or the last resort.
-        # Only called for glyphs missing from the primary font.
+        # Search this hash's declared fallbacks for the first font covering
+        # +code+, resolving each candidate the first time the search reaches it
+        # and retaining it for later glyphs. Fallbacks after the matching one
+        # are never loaded, preserving the original one-at-a-time search (and
+        # avoiding errors from unused fallbacks that cannot be loaded). Returns
+        # +fragment_font+ when no fallback covers the glyph.
         #
-        def fallback_font_for_glyph(code, encoding, fallbacks)
-          last_index = fallbacks.length - 1
+        def fallback_font_for_glyph(code, encoding, candidates, fragment_font, options)
+          fallback_names = @fallback_fonts
           index = 0
-          while index < last_index
-            name, candidate = fallbacks[index]
-            return name if candidate.glyph_present_ord?(code, encoding)
+          while index < fallback_names.length
+            candidate = candidates[index]
+            unless candidate
+              candidate = [fallback_names[index], @document.find_font(fallback_names[index], options)]
+              candidates << candidate
+            end
+            return candidate[0] if candidate[1].glyph_present_ord?(code, encoding)
 
             index += 1
           end
-          fallbacks[last_index][0]
+          fragment_font
         end
 
         def font_style(styles)
