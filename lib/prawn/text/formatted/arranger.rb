@@ -267,10 +267,11 @@ module Prawn
 
           @document.character_spacing(character_spacing) do
             if font || font_style != :normal
-              raise BadFontFamily unless @document.font.family
+              current_font = @document.font
+              raise BadFontFamily unless current_font.family
 
               @document.font(
-                font || @document.font.family, style: font_style,
+                font || current_font.family, style: font_style,
               ) do
                 apply_font_size(size, styles, &block)
               end
@@ -427,9 +428,12 @@ module Prawn
               fragment.text,
               opts,
             )
-            fragment.line_height = @document.font.height
-            fragment.descender = @document.font.descender
-            fragment.ascender = @document.font.ascender
+            # The font cannot change while these metrics are read, so fetch it
+            # once instead of once per metric.
+            font = @document.font
+            fragment.line_height = font.height
+            fragment.descender = font.descender
+            fragment.ascender = font.ascender
           end
         end
 

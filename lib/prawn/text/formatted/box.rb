@@ -456,13 +456,17 @@ module Prawn
             formatted_text = process_fallback_fonts(formatted_text)
           end
 
+          # A per-fragment :font is selected transactionally inside the loop, so
+          # the document font is the same object for every hash that has none.
+          default_font = @document.font
+
           formatted_text.each do |hash|
             if hash[:font]
               @document.font(hash[:font]) do
                 hash[:text] = @document.font.normalize_encoding(hash[:text])
               end
             else
-              hash[:text] = @document.font.normalize_encoding(hash[:text])
+              hash[:text] = default_font.normalize_encoding(hash[:text])
             end
           end
 
@@ -486,39 +490,64 @@ module Prawn
           fragment_font_options =
             (fragment_font_style = font_style(hash[:styles])) == :normal ? {} : { style: fragment_font_style }
 
-          fallback_fonts = @fallback_fonts.dup
-          # always default back to the current font if the glyph is missing from
-          # all fonts
-          fallback_fonts << fragment_font
+          # Resolve the primary font object once. The previous implementation
+          # selected the candidate font on the document for every character
+          # and then asked the document for its current font again to test the
+          # glyph, costing two font lookups per glyph.
+          primary_font =
+            if fragment_font.nil?
+              @document.font
+            else
+              @document.find_font(fragment_font, fragment_font_options)
+            end
+
+          # [name, font object] for each declared fallback, followed by the
+          # fragment font itself: the same search order and unconditional last
+          # resort as before. Built on the first missing glyph, since most text
+          # stays in the primary font and never needs it.
+          fallbacks = nil
 
           fragments = []
           fragment = nil
           current_font = nil
           no_explicit_font = hash[:font].nil?
 
-          @document.save_font do
-            hash[:text].each_char do |char|
-              font =
-                find_font_for_this_glyph(
-                  char,
-                  fragment_font,
-                  fallback_fonts,
-                  fragment_font_options,
-                )
-              # Don't add a :font to fragments if it wasn't there originally
-              font = nil if no_explicit_font && font == original_font
+          hash[:text].each_char do |char|
+            font = fragment_font
+            unless primary_font.glyph_present?(char)
+              fallbacks ||=
+                begin
+                  fonts = @fallback_fonts.map { |name| [name, @document.find_font(name, fragment_font_options)] }
+                  fonts << [fragment_font, primary_font]
+                  fonts
+                end
 
-              if font != current_font || fragments.empty?
-                current_font = font
-                fragment = hash.dup
-                fragment[:text] = char
-                fragment[:font] = font unless font.nil?
-                fragments << fragment
-              else
-                # Append in place: falling back builds one fragment per run of
-                # glyphs sharing a font, and those runs can be long.
-                fragment[:text] << char
+              last_index = fallbacks.length - 1
+              index = 0
+              while index < last_index
+                name, candidate = fallbacks[index]
+                if candidate.glyph_present?(char)
+                  font = name
+                  break
+                end
+                index += 1
               end
+              font = fallbacks[last_index][0] if index == last_index
+            end
+
+            # Don't add a :font to fragments if it wasn't there originally
+            font = nil if no_explicit_font && font == original_font
+
+            if font != current_font || fragments.empty?
+              current_font = font
+              fragment = hash.dup
+              fragment[:text] = char
+              fragment[:font] = font unless font.nil?
+              fragments << fragment
+            else
+              # Append in place: falling back builds one fragment per run of
+              # glyphs sharing a font, and those runs can be long.
+              fragment[:text] << char
             end
           end
 
@@ -536,17 +565,6 @@ module Prawn
             end
           else
             :normal
-          end
-        end
-
-        def find_font_for_this_glyph(char, current_font, fallback_fonts, current_font_options = {})
-          @document.font(current_font, current_font_options)
-          return current_font if fallback_fonts.empty? || @document.font.glyph_present?(char)
-
-          last_index = fallback_fonts.length - 1
-          fallback_fonts.each_with_index do |font, index|
-            @document.font(font, current_font_options)
-            return font if index == last_index || @document.font.glyph_present?(char)
           end
         end
 

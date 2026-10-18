@@ -292,9 +292,10 @@ module Prawn
     #   a font suitcase/collection
     # @return [Font]
     def find_font(name, options = EMPTY_FONT_OPTIONS) # :nodoc:
-      if font_families.key?(name)
+      families = font_families
+      if families.key?(name)
         family = name
-        name = font_families[name][options[:style] || :normal]
+        name = families[name][options[:style] || :normal]
         if name.is_a?(::Hash)
           options = options.merge(name)
           name = options[:file]
