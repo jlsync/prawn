@@ -211,6 +211,20 @@ module Prawn
         false
       end
 
+      # Codepoint form of {#glyph_present?}. ASCII is always present; other
+      # codepoints are rebuilt in the source encoding so normalize_encoding
+      # sees exactly the character it would have seen before.
+      #
+      # @api private
+      # @param code [Integer]
+      # @param encoding [Encoding]
+      # @return [Boolean]
+      def glyph_present_ord?(code, encoding = ::Encoding::UTF_8)
+        return true if code < 128
+
+        glyph_present?(code.chr(encoding))
+      end
+
       private
 
       def register(_subset)

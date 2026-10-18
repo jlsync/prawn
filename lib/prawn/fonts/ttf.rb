@@ -404,6 +404,16 @@ module Prawn
         cmap[char.ord].positive?
       end
 
+      # Codepoint form of {#glyph_present?}; the cmap is keyed by codepoint, so
+      # no one-character String is needed.
+      #
+      # @api private
+      # @param code [Integer]
+      # @return [Boolean]
+      def glyph_present_ord?(code, _encoding = ::Encoding::UTF_8)
+        cmap[code].positive?
+      end
+
       # Returns the number of characters in `str` (a UTF-8-encoded string).
       #
       # @param str [String]

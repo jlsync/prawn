@@ -511,10 +511,16 @@ module Prawn
           fragment = nil
           current_font = nil
           no_explicit_font = hash[:font].nil?
+          text = hash[:text]
+          text_encoding = text.encoding
 
-          hash[:text].each_char do |char|
+          # Iterating codepoints rather than characters avoids allocating a
+          # one-character String for every glyph. Each fragment's text is built
+          # from the same codepoints in the source encoding, so it is
+          # byte-for-byte what the per-character version produced.
+          text.each_codepoint do |code|
             font = fragment_font
-            unless primary_font.glyph_present?(char)
+            unless primary_font.glyph_present_ord?(code, text_encoding)
               fallbacks ||=
                 begin
                   fonts = @fallback_fonts.map { |name| [name, @document.find_font(name, fragment_font_options)] }
@@ -526,7 +532,7 @@ module Prawn
               index = 0
               while index < last_index
                 name, candidate = fallbacks[index]
-                if candidate.glyph_present?(char)
+                if candidate.glyph_present_ord?(code, text_encoding)
                   font = name
                   break
                 end
@@ -541,13 +547,13 @@ module Prawn
             if font != current_font || fragments.empty?
               current_font = font
               fragment = hash.dup
-              fragment[:text] = char
+              fragment[:text] = String.new(encoding: text_encoding) << code
               fragment[:font] = font unless font.nil?
               fragments << fragment
             else
               # Append in place: falling back builds one fragment per run of
               # glyphs sharing a font, and those runs can be long.
-              fragment[:text] << char
+              fragment[:text] << code
             end
           end
 

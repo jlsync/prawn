@@ -490,6 +490,20 @@ module Prawn
       str.dup.replace(normalize_encoding(str))
     end
 
+    # Does this font have a glyph for the character with the given codepoint?
+    #
+    # Equivalent to calling #glyph_present? on a one-character String, but
+    # without allocating that String.
+    #
+    # @api private
+    # @param code [Integer]
+    # @param encoding [Encoding] the encoding to build the character in when a
+    #   subclass needs the encoded character rather than the codepoint
+    # @return [Boolean]
+    def glyph_present_ord?(code, encoding = ::Encoding::UTF_8)
+      glyph_present?(code.chr(encoding))
+    end
+
     # Gets height of font in PDF points at the given font size.
     #
     # @param size [Number]
