@@ -476,31 +476,44 @@ module Prawn
         def process_fallback_fonts(formatted_text)
           modified_formatted_text = []
 
+          # The document font cannot change while the array is processed, and
+          # consecutive hashes usually share a font and style, so resolve each
+          # one once instead of looking it up for every hash.
+          document_font = @document.font
+          original_font = document_font.family
+          cached_font = cached_style = cached_primary = nil
+
           formatted_text.each do |hash|
-            fragments = analyze_glyphs_for_fallback_font_support(hash)
-            modified_formatted_text.concat(fragments)
+            fragment_font = hash[:font] || original_font
+            fragment_font_style = font_style(hash[:styles])
+            fragment_font_options = fragment_font_style == :normal ? EMPTY_FLAGS : { style: fragment_font_style }
+
+            primary_font =
+              if fragment_font == cached_font && fragment_font_style == cached_style
+                cached_primary
+              elsif fragment_font.nil?
+                document_font
+              else
+                @document.find_font(fragment_font, fragment_font_options)
+              end
+
+            cached_font = fragment_font
+            cached_style = fragment_font_style
+            cached_primary = primary_font
+
+            modified_formatted_text.concat(
+              analyze_glyphs_for_fallback_font_support(
+                hash, original_font, fragment_font, fragment_font_options, primary_font,
+              ),
+            )
           end
 
           modified_formatted_text
         end
 
-        def analyze_glyphs_for_fallback_font_support(hash)
-          original_font = @document.font.family
-          fragment_font = hash[:font] || original_font
-          fragment_font_options =
-            (fragment_font_style = font_style(hash[:styles])) == :normal ? {} : { style: fragment_font_style }
-
-          # Resolve the primary font object once. The previous implementation
-          # selected the candidate font on the document for every character
-          # and then asked the document for its current font again to test the
-          # glyph, costing two font lookups per glyph.
-          primary_font =
-            if fragment_font.nil?
-              @document.font
-            else
-              @document.find_font(fragment_font, fragment_font_options)
-            end
-
+        def analyze_glyphs_for_fallback_font_support(
+          hash, original_font, fragment_font, fragment_font_options, primary_font
+        )
           # [name, font object] for each declared fallback, followed by the
           # fragment font itself: the same search order and unconditional last
           # resort as before. Built on the first missing glyph, since most text
@@ -527,18 +540,7 @@ module Prawn
                   fonts << [fragment_font, primary_font]
                   fonts
                 end
-
-              last_index = fallbacks.length - 1
-              index = 0
-              while index < last_index
-                name, candidate = fallbacks[index]
-                if candidate.glyph_present_ord?(code, text_encoding)
-                  font = name
-                  break
-                end
-                index += 1
-              end
-              font = fallbacks[last_index][0] if index == last_index
+              font = fallback_font_for_glyph(code, text_encoding, fallbacks)
             end
 
             # Don't add a :font to fragments if it wasn't there originally
@@ -558,6 +560,22 @@ module Prawn
           end
 
           fragments
+        end
+
+        # Given the lazily resolved fallback list (which ends with the fragment
+        # font), return the first font name covering +code+, or the last resort.
+        # Only called for glyphs missing from the primary font.
+        #
+        def fallback_font_for_glyph(code, encoding, fallbacks)
+          last_index = fallbacks.length - 1
+          index = 0
+          while index < last_index
+            name, candidate = fallbacks[index]
+            return name if candidate.glyph_present_ord?(code, encoding)
+
+            index += 1
+          end
+          fallbacks[last_index][0]
         end
 
         def font_style(styles)
