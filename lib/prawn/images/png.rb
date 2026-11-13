@@ -81,7 +81,7 @@ module Prawn
       # @param data [String] A binary string of PNG data.
       def initialize(data)
         super()
-        data = StringIO.new(data.dup)
+        data = StringIO.new(data)
 
         data.read(8) # Skip the default header
 
@@ -335,28 +335,32 @@ module Prawn
         alpha_data = String.new(capacity: alpha_size, encoding: ::Encoding::BINARY)
 
         position = 0
-        scanlines.times do
-          filter = source.getbyte(position)
-          position += 1
-          color_data << filter
-          alpha_data << filter
+        if color_bytes == 3 && alpha_bytes == 1
+          split_rgb_rgba_data(source, scanlines, color_data, alpha_data)
+        else
+          scanlines.times do
+            filter = source.getbyte(position)
+            position += 1
+            color_data << filter
+            alpha_data << filter
 
-          width.times do
-            color_data <<
-              if color_bytes == 1
-                source.getbyte(position)
-              else
-                source.byteslice(position, color_bytes)
-              end
-            position += color_bytes
+            width.times do
+              color_data <<
+                if color_bytes == 1
+                  source.getbyte(position)
+                else
+                  source.byteslice(position, color_bytes)
+                end
+              position += color_bytes
 
-            alpha_data <<
-              if alpha_bytes == 1
-                source.getbyte(position)
-              else
-                source.byteslice(position, alpha_bytes)
-              end
-            position += alpha_bytes
+              alpha_data <<
+                if alpha_bytes == 1
+                  source.getbyte(position)
+                else
+                  source.byteslice(position, alpha_bytes)
+                end
+              position += alpha_bytes
+            end
           end
         end
 
@@ -369,6 +373,26 @@ module Prawn
 
         @img_data = color_data
         @alpha_channel = alpha_data
+      end
+
+      def split_rgb_rgba_data(source, scanlines, color_data, alpha_data)
+        position = 0
+        row_width = width
+        scanlines.times do
+          filter = source.getbyte(position)
+          position += 1
+          color_data << filter
+          alpha_data << filter
+
+          row_width.times do
+            color_data <<
+              source.getbyte(position) <<
+              source.getbyte(position + 1) <<
+              source.getbyte(position + 2)
+            alpha_data << source.getbyte(position + 3)
+            position += 4
+          end
+        end
       end
 
       def generate_alpha_channel

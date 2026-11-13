@@ -251,7 +251,9 @@ module Prawn
           text = text.chomp
         end
 
-        if options[:kerning]
+        return [] if options[:kerning] && text.empty?
+
+        if options[:kerning] && has_kerning_data?
           kerned = kern(text)
           if kerned.length == 1
             return @subsets.encode(kerned[0])
@@ -566,11 +568,13 @@ module Prawn
 
         first_char, last_char = unicode_mapping.keys.minmax
         hmtx = font.horizontal_metrics
+        code_map = font.cmap.tables.first.code_map
+        factor = scale_factor
         widths =
           (first_char..last_char).map { |code|
             if unicode_mapping.key?(code)
-              gid = font.cmap.tables.first.code_map[code]
-              Integer(hmtx.widths[gid] * scale_factor)
+              gid = code_map[code]
+              Integer(hmtx.widths[gid] * factor)
             else
               # These characters are not in the document so we don't ever use
               # these values but we need to encode them so let's use as little

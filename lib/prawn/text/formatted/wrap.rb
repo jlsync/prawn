@@ -42,18 +42,19 @@ module Prawn
         def wrap(array)
           initialize_wrap(array)
 
+          line_wrap_opts = (@line_wrap_options ||= {})
+          line_wrap_opts[:document] = @document
+          line_wrap_opts[:kerning] = @kerning
+          line_wrap_opts[:arranger] = @arranger
+          line_wrap_opts[:disable_wrap_by_char] = @disable_wrap_by_char
+
           stop = false
           until stop
             # wrap before testing if enough height for this line because the
             # height of the highest fragment on this line will be used to
             # determine the line height
-            @line_wrap.wrap_line(
-              document: @document,
-              kerning: @kerning,
-              width: available_width,
-              arranger: @arranger,
-              disable_wrap_by_char: @disable_wrap_by_char,
-            )
+            line_wrap_opts[:width] = available_width
+            @line_wrap.wrap_line(line_wrap_opts)
 
             if enough_height_for_this_line?
               move_baseline_down

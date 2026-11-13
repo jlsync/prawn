@@ -32,17 +32,30 @@ module Prawn
           @document.font
         end
 
-      widths = ((@cache[f] ||= {})[@document.font_size] ||= {})[options_key(options)] ||= {}
-      encoded_string = nil
-      length =
-        widths.fetch(string) {
-          encoded_string = f.normalize_encoding(string)
-          widths[string] = f.compute_width_of(encoded_string, options)
-        }
+      font_size = @document.font_size
+      opt_key = options_key(options)
+      widths =
+        if opt_key.is_a?(Hash)
+          ((@cache[f] ||= {})[font_size] ||= {})[opt_key] ||= {}
+        elsif f.equal?(@last_font) && font_size.eql?(@last_font_size) && opt_key.eql?(@last_opt_key)
+          @last_widths
+        else
+          @last_font = f
+          @last_font_size = font_size
+          @last_opt_key = opt_key
+          @last_widths = (((@cache[f] ||= {})[font_size] ||= {})[opt_key] ||= {})
+        end
 
-      # Character spacing of exactly 0 adds nothing, so skip counting.
+      encoded_string = nil
+      length = widths[string]
+      unless length
+        encoded_string = f.normalize_encoding(string)
+        length = widths[string] = f.compute_width_of(encoded_string, options)
+      end
+
+      # Character spacing of 0 adds nothing, so skip counting.
       character_spacing = @document.character_spacing
-      unless character_spacing.equal?(0)
+      unless character_spacing.nil? || character_spacing.zero?
         encoded_string ||= f.normalize_encoding(string)
         character_count = @document.font.character_count(encoded_string)
         if character_count.positive?

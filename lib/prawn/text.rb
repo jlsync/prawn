@@ -386,7 +386,13 @@ module Prawn
         current_font.class.hide_m17n_warning = true
       end
 
-      x, y = map_to_absolute(options[:at])
+      at = options[:at]
+      if at.is_a?(Array) && at.length == 2 && !at[0].respond_to?(:to_ary) && !at[1].respond_to?(:to_ary)
+        x = @bounding_box.absolute_left + at[0]
+        y = @bounding_box.absolute_bottom + at[1]
+      else
+        x, y = map_to_absolute(at)
+      end
       add_text_content(text, x, y, options)
     end
 

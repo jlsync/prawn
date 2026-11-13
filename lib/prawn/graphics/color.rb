@@ -217,6 +217,10 @@ module Prawn
         if options && options[:pattern]
           set_color_space(type, :Pattern)
           renderer.add_content("/#{color} #{operator}")
+        elsif color.instance_of?(String) && color.bytesize == 6 &&
+            (cached = @rgb_color_cache&.[](color))
+          set_color_space(type, :DeviceRGB)
+          write_color(cached, operator)
         else
           set_color_space(type, color_space(color))
           color = color_to_s(color)

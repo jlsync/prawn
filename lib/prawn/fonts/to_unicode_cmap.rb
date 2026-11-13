@@ -57,7 +57,14 @@ module Prawn
         chunks << 'endcodespacerange'
 
         # Mapping
-        all_spans = mapping_spans(mapping.reject { |gid, cid| gid.zero? || (0xd800..0xdfff).cover?(cid) })
+        filtered = []
+        mapping.each do |gid, cid|
+          next if gid.zero? || cid.between?(0xd800, 0xdfff)
+
+          filtered << [gid, cid]
+        end
+        filtered.sort!
+        all_spans = mapping_spans(filtered, presorted: true)
 
         short_spans, long_spans = all_spans.partition { |span| span[0] == :short }
 
@@ -127,9 +134,8 @@ module Prawn
       attr_reader :code_space_size
       attr_reader :code_space_max
 
-      def mapping_spans(mapping)
-        mapping
-          .sort
+      def mapping_spans(mapping, presorted: false)
+        (presorted ? mapping : mapping.sort)
           .slice_when { |a, b| (b[0] - a[0]) != 1 } # Slice at key discontinuity
           .flat_map { |slice|
             if slice.length == 1

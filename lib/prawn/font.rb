@@ -147,7 +147,7 @@ module Prawn
     # @option options :kerning [Boolean] (false)
     # @option options :style [Symbol]
     # @return [Number]
-    def width_of(string, options = {})
+    def width_of(string, options = DEFAULT_OPTS)
       if options.key?(:inline_format)
         p = options[:inline_format]
         p = [] unless p.is_a?(Array)
@@ -346,7 +346,7 @@ module Prawn
       arranger.line_width
     end
 
-    def width_of_string(string, options = {})
+    def width_of_string(string, options = DEFAULT_OPTS)
       font_metric_cache.width_of(string, options)
     end
   end

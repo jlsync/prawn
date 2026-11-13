@@ -33,6 +33,10 @@ module Prawn
     REAL_PARAM_CACHE_SIZE = 1024
     private_constant :REAL_PARAM_CACHE_SIZE
 
+    # Empty options Hash shared by optional-options drawing methods.
+    EMPTY_OPTIONS = {}.freeze
+    private_constant :EMPTY_OPTIONS
+
     # @group Stable API
 
     #######################################################################
@@ -53,9 +57,8 @@ module Prawn
     #   @param x [Number]
     #   @param y [Number]
     #   @return [void]
-    def move_to(*point)
-      x, y = map_to_absolute(point)
-      renderer.add_content("#{real_param(x)} #{real_param(y)} m")
+    def move_to(x_or_point, y = nil)
+      point_command('m', x_or_point, y)
     end
 
     # Draws a line from the current drawing position to the specified point.
@@ -72,9 +75,8 @@ module Prawn
     #   @param x [Number]
     #   @param y [Number]
     #   @return [void]
-    def line_to(*point)
-      x, y = map_to_absolute(point)
-      renderer.add_content("#{real_param(x)} #{real_param(y)} l")
+    def line_to(x_or_point, y = nil)
+      point_command('l', x_or_point, y)
     end
 
     # Draws a Bezier curve from the current drawing position to the
@@ -123,7 +125,14 @@ module Prawn
     # @param height [Number]
     # @return [void]
     def rectangle(point, width, height)
-      x, y = map_to_absolute(point)
+      if point.instance_of?(Array) && point.length == 2 &&
+          !point[0].respond_to?(:to_ary, true) &&
+          !point[1].respond_to?(:to_ary, true)
+        x = @bounding_box.absolute_left + point[0]
+        y = @bounding_box.absolute_bottom + point[1]
+      else
+        x, y = map_to_absolute(point)
+      end
 
       renderer.add_content(
         "#{real_param(x)} #{real_param(y - height)} #{real_param(width)} #{real_param(height)} re",
@@ -200,25 +209,28 @@ module Prawn
     #   @param x2 [Number]
     #   @param y2 [Number]
     #   @return [void]
-    def line(*points)
-      # The usual two point arrays and four scalar arguments need no flattening.
-      tuple_pair = points.length == 2 &&
-        points[0].instance_of?(Array) && points[1].instance_of?(Array) &&
-        points[0].length == 2 && points[1].length == 2
-      if tuple_pair
-        x0, y0 = points[0]
-        x1, y1 = points[1]
-      else
-        x0, y0, x1, y1 = points
+    def line(from_or_x0, to_or_y0 = nil, dest_x = nil, dest_y = nil)
+      if dest_x.nil? && dest_y.nil? &&
+          from_or_x0.instance_of?(Array) && to_or_y0.instance_of?(Array) &&
+          from_or_x0.length == 2 && to_or_y0.length == 2
+        x0, y0 = from_or_x0
+        x1, y1 = to_or_y0
+        if !x0.respond_to?(:to_ary, true) && !y0.respond_to?(:to_ary, true) &&
+            !x1.respond_to?(:to_ary, true) && !y1.respond_to?(:to_ary, true)
+          move_to(x0, y0)
+          line_to(x1, y1)
+          return
+        end
+      elsif !dest_x.nil? && !dest_y.nil? &&
+          !from_or_x0.respond_to?(:to_ary, true) &&
+          !to_or_y0.respond_to?(:to_ary, true) &&
+          !dest_x.respond_to?(:to_ary, true) && !dest_y.respond_to?(:to_ary, true)
+        move_to(from_or_x0, to_or_y0)
+        line_to(dest_x, dest_y)
+        return
       end
 
-      # Preserve recursive flattening and array-like arguments, including
-      # objects whose implicit array conversion is private.
-      if (!tuple_pair && points.length != 4) ||
-          x0.respond_to?(:to_ary, true) || y0.respond_to?(:to_ary, true) ||
-          x1.respond_to?(:to_ary, true) || y1.respond_to?(:to_ary, true)
-        x0, y0, x1, y1 = points.flatten
-      end
+      x0, y0, x1, y1 = [from_or_x0, to_or_y0, dest_x, dest_y].flatten
       move_to(x0, y0)
       line_to(x1, y1)
     end
@@ -516,7 +528,7 @@ module Prawn
     # @option options :fill_rule [Symbol]
     # @yield
     # @return [void]
-    def fill(options = {})
+    def fill(options = EMPTY_OPTIONS)
       yield if block_given?
       renderer.add_content(options[:fill_rule] == :even_odd ? 'f*' : 'f')
     end
@@ -534,7 +546,7 @@ module Prawn
     # @option options :fill_rule [Symbol]
     # @yield
     # @return [void]
-    def fill_and_stroke(options = {})
+    def fill_and_stroke(options = EMPTY_OPTIONS)
       yield if block_given?
       renderer.add_content(options[:fill_rule] == :even_odd ? 'b*' : 'b')
     end
@@ -777,14 +789,30 @@ module Prawn
 
     ops.product(shapes).each do |operation, shape|
       class_eval <<-METHOD, __FILE__, __LINE__ + 1
-        def #{operation}_#{shape}(*args)    # def fill_polygon(*args)
-          #{shape}(*args)                   #   polygon(*args)
-          #{operation}                      #   fill
-        end                                 # end
+        def #{operation}_#{shape}(...)    # def fill_polygon(...)
+          #{shape}(...)                   #   polygon(...)
+          #{operation}                    #   fill
+        end                               # end
       METHOD
     end
 
     private
+
+    def point_command(operator, x_or_point, y = nil)
+      if !y.nil? && !x_or_point.respond_to?(:to_ary, true) &&
+          !y.respond_to?(:to_ary, true)
+        abs_x = @bounding_box.absolute_left + x_or_point
+        abs_y = @bounding_box.absolute_bottom + y
+      elsif y.nil? && x_or_point.instance_of?(Array) &&
+          x_or_point.length == 2 && !x_or_point[0].respond_to?(:to_ary, true) &&
+          !x_or_point[1].respond_to?(:to_ary, true)
+        abs_x = @bounding_box.absolute_left + x_or_point[0]
+        abs_y = @bounding_box.absolute_bottom + x_or_point[1]
+      else
+        abs_x, abs_y = map_to_absolute(y.nil? ? x_or_point : [x_or_point, y])
+      end
+      renderer.add_content("#{real_param(abs_x)} #{real_param(abs_y)} #{operator}")
+    end
 
     # Formats a single numeric content stream parameter, remembering floating
     # point results for values that have been formatted before. Coordinate
