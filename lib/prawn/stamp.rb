@@ -36,7 +36,7 @@ module Prawn
       dictionary_name, dictionary = stamp_dictionary(name)
       renderer.add_content("/#{dictionary_name} Do")
       update_annotation_references(dictionary.data[:Annots])
-      state.page.xobjects.merge!(dictionary_name => dictionary)
+      state.page.xobjects[dictionary_name] = dictionary
     end
 
     # Renders the stamp at a position offset from the initial coords at which

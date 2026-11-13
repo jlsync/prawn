@@ -9,6 +9,9 @@ module Prawn
       # @private
       CAP_STYLES = { butt: 0, round: 1, projecting_square: 2 }.freeze
 
+      CAP_STYLE_COMMANDS = CAP_STYLES.transform_values { |v| -"#{v} J" }.freeze
+      private_constant :CAP_STYLE_COMMANDS
+
       # Sets the cap style for stroked lines and curves.
       #
       # @overload cap_style(style)
@@ -37,7 +40,8 @@ module Prawn
       end
 
       def write_stroke_cap_style
-        renderer.add_content("#{CAP_STYLES[current_cap_style]} J")
+        cmd = CAP_STYLE_COMMANDS[current_cap_style] || "#{CAP_STYLES[current_cap_style]} J"
+        renderer.add_content(cmd)
       end
     end
   end

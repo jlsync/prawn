@@ -363,23 +363,24 @@ module Prawn
           if @inked
             draw_fragment_underlays(fragment)
 
-            @document.word_spacing(word_spacing) do
-              if @draw_text_callback
-                @draw_text_callback.call(
-                  fragment.text,
-                  at: [x, y],
-                  kerning: @kerning,
-                )
-              else
-                @document.draw_text!(
-                  fragment.text,
-                  at: [x, y],
-                  kerning: @kerning,
-                )
+            if @document.word_spacing == word_spacing
+              draw_fragment_text(fragment.text, x, y)
+            else
+              @document.word_spacing(word_spacing) do
+                draw_fragment_text(fragment.text, x, y)
               end
             end
 
             draw_fragment_overlays(fragment)
+          end
+        end
+
+        # Renders a single formatted text fragment at (+x+, +y+).
+        def draw_fragment_text(text, x, y)
+          if @draw_text_callback
+            @draw_text_callback.call(text, at: [x, y], kerning: @kerning)
+          else
+            @document.draw_text!(text, at: [x, y], kerning: @kerning)
           end
         end
 

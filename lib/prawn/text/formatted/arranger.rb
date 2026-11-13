@@ -265,19 +265,28 @@ module Prawn
           end
           font_style = font_style(styles)
 
-          @document.character_spacing(character_spacing) do
-            if font || font_style != :normal
-              current_font = @document.font
-              raise BadFontFamily unless current_font.family
+          if character_spacing == @document.character_spacing
+            apply_font_family_and_size(font, font_style, size, styles, &block)
+          else
+            @document.character_spacing(character_spacing) do
+              apply_font_family_and_size(font, font_style, size, styles, &block)
+            end
+          end
+        end
 
-              @document.font(
-                font || current_font.family, style: font_style,
-              ) do
-                apply_font_size(size, styles, &block)
-              end
-            else
+        # Applies the requested font family, style, and size around +block+.
+        def apply_font_family_and_size(font, font_style, size, styles, &block)
+          if font || font_style != :normal
+            current_font = @document.font
+            raise BadFontFamily unless current_font.family
+
+            @document.font(
+              font || current_font.family, style: font_style,
+            ) do
               apply_font_size(size, styles, &block)
             end
+          else
+            apply_font_size(size, styles, &block)
           end
         end
 

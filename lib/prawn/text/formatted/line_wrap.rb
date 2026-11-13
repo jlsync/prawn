@@ -298,17 +298,29 @@ module Prawn
         end
 
         def soft_hyphen_width_cached(shy_char)
-          @soft_hyphen_width_cache ||= {}
-          # Cache by current font identity, size and kerning since width depends on them
           font_id = @document.font.object_id
-          key = [font_id, @document.font_size, @kerning]
-          if (w = @soft_hyphen_width_cache[key])
-            return w
+          font_size = @document.font_size
+          if font_id == @shy_font_id &&
+              font_size.eql?(@shy_font_size) &&
+              @kerning.eql?(@shy_kerning)
+            return @shy_width
+          end
+
+          cache = @soft_hyphen_width_cache ||= {}
+          size_cache = (cache[@kerning] ||= {})[font_id] ||= {}
+          if (w = size_cache[font_size])
+            @shy_font_id = font_id
+            @shy_font_size = font_size
+            @shy_kerning = @kerning
+            return @shy_width = w
           end
 
           w = @document.width_of(shy_char, kerning_options)
-          @soft_hyphen_width_cache[key] = w
-          w
+          size_cache[font_size] = w
+          @shy_font_id = font_id
+          @shy_font_size = font_size
+          @shy_kerning = @kerning
+          @shy_width = w
         end
 
         def kerning_options

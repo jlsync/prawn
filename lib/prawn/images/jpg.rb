@@ -65,21 +65,29 @@ module Prawn
       def initialize(data)
         super()
         @data = data
-        d = StringIO.new(@data)
-        d.binmode
-
+        pos = 2 # Skip the first two bytes of JPEG identifier.
+        bytesize = data.bytesize
         c_marker = 0xff # Section marker.
-        d.seek(2) # Skip the first two bytes of JPEG identifier.
         loop do
-          marker, code, length = d.read(4).unpack('CCn')
-          raise FormatError, 'JPEG marker not found!' if marker != c_marker
+          if pos + 4 > bytesize || data.getbyte(pos) != c_marker
+            raise FormatError, 'JPEG marker not found!'
+          end
+
+          code = data.getbyte(pos + 1)
+          length = (data.getbyte(pos + 2) << 8) | data.getbyte(pos + 3)
+          pos += 4
 
           if JPEG_SOF_BLOCKS.include?(code)
-            @bits, @height, @width, @channels = d.read(6).unpack('CnnC')
+            raise FormatError, 'JPEG marker not found!' if pos + 6 > bytesize
+
+            @bits = data.getbyte(pos)
+            @height = (data.getbyte(pos + 1) << 8) | data.getbyte(pos + 2)
+            @width = (data.getbyte(pos + 3) << 8) | data.getbyte(pos + 4)
+            @channels = data.getbyte(pos + 5)
             break
           end
 
-          d.seek(length - 2, IO::SEEK_CUR)
+          pos += length - 2
         end
       end
 

@@ -7,6 +7,9 @@ module Prawn
       # @private
       JOIN_STYLES = { miter: 0, round: 1, bevel: 2 }.freeze
 
+      JOIN_STYLE_COMMANDS = JOIN_STYLES.transform_values { |v| -"#{v} j" }.freeze
+      private_constant :JOIN_STYLE_COMMANDS
+
       # @group Stable API
 
       # Get or set the join style for stroked lines and curves.
@@ -53,7 +56,9 @@ module Prawn
       end
 
       def write_stroke_join_style
-        renderer.add_content("#{JOIN_STYLES[current_join_style]} j")
+        cmd = JOIN_STYLE_COMMANDS[current_join_style] ||
+          "#{JOIN_STYLES[current_join_style]} j"
+        renderer.add_content(cmd)
       end
     end
   end

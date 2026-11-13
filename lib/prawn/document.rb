@@ -837,6 +837,8 @@ module Prawn
     private_constant :MARGIN_SIDES, :MARGIN_POSITIONS, :MARGIN_SIDE_KEYS
 
     def apply_margin_options(options)
+      return if options.empty?
+
       margin = Array(options[:margin])
 
       # Treat :margin as CSS shorthand with 1-4 values.

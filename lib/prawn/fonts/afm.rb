@@ -204,10 +204,12 @@ module Prawn
       # @param char [String]
       # @return [Boolean]
       def glyph_present?(char)
-        return true if char.ascii_only?
+        return true if char.ascii_only? || char.encoding == ::Encoding::Windows_1252
 
-        !normalize_encoding(char).nil?
-      rescue Prawn::Errors::IncompatibleStringEncoding
+        char.encode(::Encoding::Windows_1252)
+        true
+      rescue ::Encoding::InvalidByteSequenceError,
+             ::Encoding::UndefinedConversionError
         false
       end
 

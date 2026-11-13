@@ -80,34 +80,38 @@ module Prawn
           array_from_tokens(tokens)
         end
 
+        TO_STRING_PREFIXES = {
+          bold: '<b>',
+          italic: '<i>',
+          underline: '<u>',
+          strikethrough: '<strikethrough>',
+          subscript: '<sub>',
+          superscript: '<sup>',
+        }.freeze
+        private_constant :TO_STRING_PREFIXES
+
+        TO_STRING_SUFFIXES = {
+          bold: '</b>',
+          italic: '</i>',
+          underline: '</u>',
+          strikethrough: '</strikethrough>',
+          subscript: '</sub>',
+          superscript: '</sup>',
+        }.freeze
+        private_constant :TO_STRING_SUFFIXES
+
         # Serialize text fragments to an inline format string.
         #
         # @param array [Array<Hash>]
         # @return [String]
         def self.to_string(array)
-          prefixes = {
-            bold: '<b>',
-            italic: '<i>',
-            underline: '<u>',
-            strikethrough: '<strikethrough>',
-            subscript: '<sub>',
-            superscript: '<sup>',
-          }
-          suffixes = {
-            bold: '</b>',
-            italic: '</i>',
-            underline: '</u>',
-            strikethrough: '</strikethrough>',
-            subscript: '</sub>',
-            superscript: '</sup>',
-          }
           array
             .map { |hash|
               prefix = +''
               suffix = +''
               hash[:styles]&.each do |style|
-                prefix << prefixes[style]
-                suffix.prepend(suffixes[style])
+                prefix << TO_STRING_PREFIXES[style]
+                suffix.prepend(TO_STRING_SUFFIXES[style])
               end
 
               font = hash[:font] ? " name='#{hash[:font]}'" : nil
@@ -164,12 +168,16 @@ module Prawn
             hash[:text].scan(SCAN_PATTERN) do |string|
               if string == "\n"
                 if previous_string == "\n"
-                  paragraph << hash.dup.merge(text: "\n")
+                  copy = hash.dup
+                  copy[:text] = "\n"
+                  paragraph << copy
                 end
                 paragraphs << paragraph unless paragraph.empty?
                 paragraph = []
               else
-                paragraph << hash.dup.merge(text: string)
+                copy = hash.dup
+                copy[:text] = string
+                paragraph << copy
               end
               previous_string = string
             end
@@ -184,114 +192,120 @@ module Prawn
         def self.array_from_tokens(tokens)
           array = []
           styles = []
-          colors = []
+          colors = nil
           link = nil
           anchor = nil
           local = nil
-          fonts = []
-          sizes = []
-          character_spacings = []
+          fonts = nil
+          sizes = nil
+          character_spacings = nil
 
           tokens.each do |token|
-            case token
-            when '<b>', '<strong>'
-              styles << :bold
-            when '<i>', '<em>'
-              styles << :italic
-            when '<u>'
-              styles << :underline
-            when '<strikethrough>'
-              styles << :strikethrough
-            when '<sub>'
-              styles << :subscript
-            when '<sup>'
-              styles << :superscript
-            when '</b>', '</strong>'
-              styles.delete(:bold)
-            when '</i>', '</em>'
-              styles.delete(:italic)
-            when '</u>'
-              styles.delete(:underline)
-            when '</strikethrough>'
-              styles.delete(:strikethrough)
-            when '</sub>'
-              styles.delete(:subscript)
-            when '</sup>'
-              styles.delete(:superscript)
-            when '</link>', '</a>'
-              link = nil
-              anchor = nil
-              local = nil
-            when '</color>'
-              colors.pop
-            when '</font>'
-              fonts.pop
-              sizes.pop
-              character_spacings.pop
-            when /^<link[^>]*>$/, /^<a[^>]*>$/
-              matches = /href="([^"]*)"/.match(token) ||
-                /href='([^']*)'/.match(token)
-              link = matches[1] unless matches.nil?
+            if token.start_with?('<')
+              matched = true
+              case token
+              when '<b>', '<strong>'
+                styles << :bold
+              when '<i>', '<em>'
+                styles << :italic
+              when '<u>'
+                styles << :underline
+              when '<strikethrough>'
+                styles << :strikethrough
+              when '<sub>'
+                styles << :subscript
+              when '<sup>'
+                styles << :superscript
+              when '</b>', '</strong>'
+                styles.delete(:bold)
+              when '</i>', '</em>'
+                styles.delete(:italic)
+              when '</u>'
+                styles.delete(:underline)
+              when '</strikethrough>'
+                styles.delete(:strikethrough)
+              when '</sub>'
+                styles.delete(:subscript)
+              when '</sup>'
+                styles.delete(:superscript)
+              when '</link>', '</a>'
+                link = nil
+                anchor = nil
+                local = nil
+              when '</color>'
+                colors&.pop
+              when '</font>'
+                fonts&.pop
+                sizes&.pop
+                character_spacings&.pop
+              when /^<link[^>]*>$/, /^<a[^>]*>$/
+                matches = /href="([^"]*)"/.match(token) ||
+                  /href='([^']*)'/.match(token)
+                link = matches[1] unless matches.nil?
 
-              matches = /anchor="([^"]*)"/.match(token) ||
-                /anchor='([^']*)'/.match(token)
-              anchor = matches[1] unless matches.nil?
+                matches = /anchor="([^"]*)"/.match(token) ||
+                  /anchor='([^']*)'/.match(token)
+                anchor = matches[1] unless matches.nil?
 
-              matches = /local="([^"]*)"/.match(token) ||
-                /local='([^']*)'/.match(token)
-              local = matches[1] unless matches.nil?
-            when /^<color[^>]*>$/
-              matches = /rgb="#?([^"]*)"/.match(token) ||
-                /rgb='#?([^']*)'/.match(token)
-              colors << matches[1] if matches
+                matches = /local="([^"]*)"/.match(token) ||
+                  /local='([^']*)'/.match(token)
+                local = matches[1] unless matches.nil?
+              when /^<color[^>]*>$/
+                matches = /rgb="#?([^"]*)"/.match(token) ||
+                  /rgb='#?([^']*)'/.match(token)
+                (colors ||= []) << matches[1] if matches
 
-              match = /c="#?([^"]*)"/.match(token) ||
-                /c='#?([^']*)'/.match(token)
-              c = Integer(match[1], 10) unless match.nil?
-              match = /m="#?([^"]*)"/.match(token) ||
-                /m='#?([^']*)'/.match(token)
-              m = Integer(match[1], 10) unless match.nil?
-              match = /y="#?([^"]*)"/.match(token) ||
-                /y='#?([^']*)'/.match(token)
-              y = Integer(match[1], 10) unless match.nil?
-              match = /k="#?([^"]*)"/.match(token) ||
-                /k='#?([^']*)'/.match(token)
-              k = Integer(match[1], 10) unless match.nil?
-              colors << [c, m, y, k] if [c, m, y, k].all?
+                match = /c="#?([^"]*)"/.match(token) ||
+                  /c='#?([^']*)'/.match(token)
+                c = Integer(match[1], 10) unless match.nil?
+                match = /m="#?([^"]*)"/.match(token) ||
+                  /m='#?([^']*)'/.match(token)
+                m = Integer(match[1], 10) unless match.nil?
+                match = /y="#?([^"]*)"/.match(token) ||
+                  /y='#?([^']*)'/.match(token)
+                y = Integer(match[1], 10) unless match.nil?
+                match = /k="#?([^"]*)"/.match(token) ||
+                  /k='#?([^']*)'/.match(token)
+                k = Integer(match[1], 10) unless match.nil?
+                (colors ||= []) << [c, m, y, k] if [c, m, y, k].all?
 
-              # intend to support rgb="#ffffff" or rgb='#ffffff',
-              # r="255" g="255" b="255" or r='255' g='255' b='255',
-              # and c="100" m="100" y="100" k="100" or
-              # c='100' m='100' y='100' k='100'
-              # color = { :rgb => "#ffffff" }
-              # color = { :r => 255, :g => 255, :b => 255 }
-              # color = { :c => 100, :m => 100, :y => 100, :k => 100 }
-            when /^<font[^>]*>$/
-              matches = /name="([^"]*)"/.match(token) ||
-                /name='([^']*)'/.match(token)
-              fonts << matches[1] unless matches.nil?
+                # intend to support rgb="#ffffff" or rgb='#ffffff',
+                # r="255" g="255" b="255" or r='255' g='255' b='255',
+                # and c="100" m="100" y="100" k="100" or
+                # c='100' m='100' y='100' k='100'
+                # color = { :rgb => "#ffffff" }
+                # color = { :r => 255, :g => 255, :b => 255 }
+                # color = { :c => 100, :m => 100, :y => 100, :k => 100 }
+              when /^<font[^>]*>$/
+                matches = /name="([^"]*)"/.match(token) ||
+                  /name='([^']*)'/.match(token)
+                (fonts ||= []) << matches[1] unless matches.nil?
 
-              matches = /size="([^"]*)"/.match(token) ||
-                /size='([^']*)'/.match(token)
-              sizes << Float(matches[1]) unless matches.nil?
+                matches = /size="([^"]*)"/.match(token) ||
+                  /size='([^']*)'/.match(token)
+                (sizes ||= []) << Float(matches[1]) unless matches.nil?
 
-              matches = /character_spacing="([^"]*)"/.match(token) ||
-                /character_spacing='([^']*)'/.match(token)
-              character_spacings << Float(matches[1]) unless matches.nil?
-            else
-              string = unescape(token)
-              array << {
-                text: string,
-                styles: styles.dup,
-                color: colors.last,
-                local: local,
-                link: link,
-                anchor: anchor,
-                font: fonts.last,
-                size: sizes.last,
-                character_spacing: character_spacings.last,
-              }
+                matches = /character_spacing="([^"]*)"/.match(token) ||
+                  /character_spacing='([^']*)'/.match(token)
+                (character_spacings ||= []) << Float(matches[1]) unless matches.nil?
+              else
+                matched = false
+              end
+              next if matched
             end
+
+            string = unescape(token)
+            array << {
+              text: string,
+              styles: styles.dup,
+              color: colors&.last,
+              local: local,
+              link: link,
+              anchor: anchor,
+              font: fonts&.last,
+              size: sizes&.last,
+              character_spacing: character_spacings&.last,
+            }
           end
           array
         end
