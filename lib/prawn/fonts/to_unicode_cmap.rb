@@ -69,51 +69,16 @@ module Prawn
         short_spans, long_spans = all_spans.partition { |span| span[0] == :short }
 
         hex_width = code_space_size * 2
-        fully_sorted_fmt = "<%0#{hex_width}X><%0#{hex_width}X><%s>"
-        index_sorted_fmt = "<%0#{hex_width}X><%0#{hex_width}X>[%s]"
-        char_fmt = "<%0#{hex_width}X><%s>"
+        formats = {
+          fully_sorted_bmp: "<%0#{hex_width}X><%0#{hex_width}X><%04x>",
+          fully_sorted: "<%0#{hex_width}X><%0#{hex_width}X><%s>",
+          index_sorted: "<%0#{hex_width}X><%0#{hex_width}X>[%s]",
+          char_bmp: "<%0#{hex_width}X><%04x>",
+          char: "<%0#{hex_width}X><%s>",
+        }
 
-        long_spans
-          .each_slice(100) do |spans|
-            chunks << "#{spans.length} beginbfrange"
-
-            spans.each do |type, span|
-              case type
-              when :fully_sorted
-                chunks << format(
-                  fully_sorted_fmt,
-                  span.first[0],
-                  span.last[0],
-                  span.first[1].chr(::Encoding::UTF_16BE).unpack1('H*'),
-                )
-              when :index_sorted
-                chunks << format(
-                  index_sorted_fmt,
-                  span.first[0],
-                  span.last[0],
-                  span.map { |_, cid| "<#{cid.chr(::Encoding::UTF_16BE).unpack1('H*')}>" }.join,
-                )
-              end
-            end
-
-            chunks << 'endbfrange'
-          end
-
-        short_spans
-          .map { |_type, slice| slice.flatten(1) }
-          .each_slice(100) do |mapping|
-            chunks << "#{mapping.length} beginbfchar"
-            chunks.concat(
-              mapping.map { |(gid, cid)|
-                format(
-                  char_fmt,
-                  gid,
-                  cid.chr(::Encoding::UTF_16BE).unpack1('H*'),
-                )
-              },
-            )
-            chunks << 'endbfchar'
-          end
+        append_long_spans(chunks, long_spans, formats)
+        append_short_spans(chunks, short_spans, formats)
 
         # Footer
         chunks << <<~FOOTER.chomp
@@ -133,6 +98,64 @@ module Prawn
       attr_reader :cmap
       attr_reader :code_space_size
       attr_reader :code_space_max
+
+      def append_long_spans(chunks, long_spans, formats)
+        long_spans.each_slice(100) do |spans|
+          chunks << "#{spans.length} beginbfrange"
+          spans.each do |type, span|
+            chunks << format_bfrange_span(type, span, formats)
+          end
+          chunks << 'endbfrange'
+        end
+      end
+
+      def format_bfrange_span(type, span, formats)
+        case type
+        when :fully_sorted
+          cid = span.first[1]
+          if cid <= 0xFFFF
+            format(formats[:fully_sorted_bmp], span.first[0], span.last[0], cid)
+          else
+            format(
+              formats[:fully_sorted],
+              span.first[0],
+              span.last[0],
+              cid.chr(::Encoding::UTF_16BE).unpack1('H*'),
+            )
+          end
+        when :index_sorted
+          values = +''
+          span.each do |pair|
+            cid = pair[1]
+            if cid <= 0xFFFF
+              values << format('<%04x>', cid)
+            else
+              values << '<' << cid.chr(::Encoding::UTF_16BE).unpack1('H*') << '>'
+            end
+          end
+          format(formats[:index_sorted], span.first[0], span.last[0], values)
+        end
+      end
+
+      def append_short_spans(chunks, short_spans, formats)
+        short_spans.each_slice(100) do |batch|
+          chunks << "#{batch.length} beginbfchar"
+          batch.each do |entry|
+            gid, cid = entry[1][0]
+            chunks <<
+              if cid <= 0xFFFF
+                format(formats[:char_bmp], gid, cid)
+              else
+                format(
+                  formats[:char],
+                  gid,
+                  cid.chr(::Encoding::UTF_16BE).unpack1('H*'),
+                )
+              end
+          end
+          chunks << 'endbfchar'
+        end
+      end
 
       def mapping_spans(mapping, presorted: false)
         (presorted ? mapping : mapping.sort)

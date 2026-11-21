@@ -2,6 +2,84 @@
 
 ## Unreleased
 
+## PrawnPDF 2.6.0
+
+### Ruby 4.0 performance optimizations and wind-backs
+
+Reduced allocations and improved throughput across text layout, fallback fonts,
+graphics, color, CMap generation, PNG splitting, and encryption, while winding
+back earlier optimizations that regressed on Ruby 4.0.10 +YJIT:
+
+- `LineWrap`: direct byte-scanning tokenizer for ASCII-only and SHY/ZWSP-free
+  UTF-8 fragments reusing a frozen single-space token; simplified
+  `soft_hyphen_cached` / `zero_width_space_cached` by removing slower
+  per-instance ivar caches in favor of a UTF-8 fast path; wound back
+  `char_width_cached` to call `Document#width_of` directly.
+- Fallback fonts & `AFM`: fast-path fragments fully covered by the primary
+  font, cache lazily resolved fallback candidates per style across fragments,
+  avoid `String.new(encoding:)` keyword-hash allocations, and check UTF-8
+  Windows-1252 coverage via a lookup table in `AFM#glyph_present?` and
+  `#glyph_present_ord?` instead of raising and rescuing encoding errors.
+- `Arranger` & `Parser`: replace regex newline scanning in `format_array=`
+  with `byteindex`/`byteslice` splitting for valid ASCII-compatible strings,
+  reuse frozen style option hashes, avoid splatting non-Array colors, and guard
+  HTML tag attribute regexes in `Parser.array_from_tokens`.
+- `Graphics`, `Color` & `Dash`: replace `*color` rest splats in `fill_color`
+  and `stroke_color` with optional positional parameters; share
+  `add_curve_content` across `curve_to`, `ellipse`, and `rounded_vertex` and
+  fix split string interpolation in `curve_to`; remove `*point` splat in
+  `map_to_absolute`; fix integer cache-miss string allocation in `real_param`;
+  add a `Numeric` fast path in `dash`.
+- `ToUnicodeCMap`, `PNG` & `Arcfour`: format BMP codepoints directly with
+  `%04x` in `ToUnicodeCMap#generate`, use `while` loops in PNG channel
+  splitting, and cache `sbox` reads in `Arcfour#encrypt`.
+
+### Performance optimizations across text layout, fonts, graphics, images, and encryption
+
+A series of non-invasive performance improvements across Prawn's hot paths while
+preserving public APIs and byte-identical PDF output:
+
+- **Text layout & formatting**: lazy line tokenization, shared `LineWrap`
+  encoding caches, single-word and last-on-line ASCII wrapping fast paths,
+  two-argument `String#slice` for remaining text, reused wrap/kerning option
+  hashes, deferred `Fragment#process_text` string copies, single-fragment LTR
+  `Wrap#print_line` fast path, lazy `Arranger` format state via `Hash#except`,
+  fast-path plain text in `Parser.format`, and codepoint-based fallback font
+  resolution (PRs [#1](https://github.com/jlsync/prawn/pull/1),
+  [#3](https://github.com/jlsync/prawn/pull/3),
+  [#9](https://github.com/jlsync/prawn/pull/9),
+  [#10](https://github.com/jlsync/prawn/pull/10),
+  [#11](https://github.com/jlsync/prawn/pull/11),
+  [#16](https://github.com/jlsync/prawn/pull/16),
+  [#20](https://github.com/jlsync/prawn/pull/20),
+  [#21](https://github.com/jlsync/prawn/pull/21),
+  [#22](https://github.com/jlsync/prawn/pull/22)).
+- **Fonts & metrics**: identity-keyed `FontMetricCache` with scalar option keys
+  and last-bucket caching, cached font registry keys in `Document#find_font`,
+  integer-keyed kerning lookups and direct kerning width totals in `AFM` and
+  `TTF`, fast-path `normalize_encoding`, single-run `TTF#encode_text`, and
+  single-pass filtering in `ToUnicodeCMap` (PRs
+  [#1](https://github.com/jlsync/prawn/pull/1),
+  [#6](https://github.com/jlsync/prawn/pull/6),
+  [#10](https://github.com/jlsync/prawn/pull/10),
+  [#11](https://github.com/jlsync/prawn/pull/11),
+  [#15](https://github.com/jlsync/prawn/pull/15),
+  [#20](https://github.com/jlsync/prawn/pull/20),
+  [#22](https://github.com/jlsync/prawn/pull/22)).
+- **Graphics, color, images & encryption**: per-document RGB color conversion
+  and operator caching, formatted coordinate and line-width command caches,
+  frozen `CapStyle` and `JoinStyle` commands, reduced allocations in line,
+  rectangle, point, stamp, and blend-mode drawing, per-byte PNG channel
+  splitting without per-pixel string allocations, direct byte-offset JPG header
+  parsing, and faster `Arcfour` key setup and encryption (PRs
+  [#7](https://github.com/jlsync/prawn/pull/7),
+  [#8](https://github.com/jlsync/prawn/pull/8),
+  [#10](https://github.com/jlsync/prawn/pull/10),
+  [#11](https://github.com/jlsync/prawn/pull/11),
+  [#19](https://github.com/jlsync/prawn/pull/19),
+  [#20](https://github.com/jlsync/prawn/pull/20),
+  [#22](https://github.com/jlsync/prawn/pull/22)).
+
 ### Center text boxes including descenders
 
 Vertical `:center` alignment now centers the full measured text height,
@@ -18,12 +96,31 @@ modification time, and reuses them for later documents: a one-page invoice in
 DejaVu Sans renders about 2.3x faster. The cache is per thread because a parsed
 file isn't safe to share between threads. Fonts loaded from IO objects, .ttc
 collections and dfonts are not cached. Disable it with
-`Prawn::Fonts::TTF.cache_parsed_files = false`.
+`Prawn::Fonts::TTF.cache_parsed_files = false`
+(PR [#5](https://github.com/jlsync/prawn/pull/5)).
+
+### Fix `valign` error message for text boxes
+
+Updated the `ArgumentError` raised for an invalid `:valign` value to list
+`:top`, `:bottom`, and `:center` instead of `:left`, `:right`, and `:center`
+(Daniel Fuller, [#1377](https://github.com/prawnpdf/prawn/pull/1377)).
 
 ### Require Ruby 3.3 or later
 
 Prawn now requires Ruby 3.3 or later. CI tests MRI 3.3, 4.0 and head, and
-JRuby 10.0 and 10.1.
+JRuby 10.0 and 10.1
+(PR [#4](https://github.com/jlsync/prawn/pull/4)).
+
+### Maintenance, compatibility & documentation fixes
+
+- Tolerate frozen graphic state and lazy `PDF::Core::Reference#stream` from
+  updated `pdf-core` (PR [#11](https://github.com/jlsync/prawn/pull/11)).
+- Updated development dependencies (`pdf-reader` 2.x, `prawn-dev` `~> 0.7.0`)
+  and fixed spelling and grammar errors across code, comments, specs, and docs
+  (PRs [#12](https://github.com/jlsync/prawn/pull/12),
+  [#13](https://github.com/jlsync/prawn/pull/13),
+  [#14](https://github.com/jlsync/prawn/pull/14),
+  [#18](https://github.com/jlsync/prawn/pull/18)).
 
 ## PrawnPDF 2.5.0
 

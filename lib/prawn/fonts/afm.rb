@@ -199,12 +199,26 @@ module Prawn
         [[0, options[:kerning] ? kern(text) : text]]
       end
 
+      # Unicode codepoints in 0x80..0x9F that map into Windows-1252.
+      WINANSI_EXTRA_CODEPOINTS = [
+        0x0152, 0x0153, 0x0160, 0x0161, 0x0178, 0x017D, 0x017E, 0x0192,
+        0x02C6, 0x02DC, 0x2013, 0x2014, 0x2018, 0x2019, 0x201A, 0x201C,
+        0x201D, 0x201E, 0x2020, 0x2021, 0x2022, 0x2026, 0x2030, 0x2039,
+        0x203A, 0x20AC, 0x2122,
+      ].to_h { |cp| [cp, true] }.freeze
+      private_constant :WINANSI_EXTRA_CODEPOINTS
+
       # Does this font has a glyph for the character?
       #
       # @param char [String]
       # @return [Boolean]
       def glyph_present?(char)
         return true if char.ascii_only? || char.encoding == ::Encoding::Windows_1252
+
+        if char.encoding == ::Encoding::UTF_8 && char.valid_encoding? && char.length == 1
+          code = char.ord
+          return code.between?(0xA0, 0xFF) || WINANSI_EXTRA_CODEPOINTS.key?(code)
+        end
 
         char.encode(::Encoding::Windows_1252)
         true
@@ -213,9 +227,9 @@ module Prawn
         false
       end
 
-      # Codepoint form of {#glyph_present?}. ASCII is always present; other
-      # codepoints are rebuilt in the source encoding so normalize_encoding
-      # sees exactly the character it would have seen before.
+      # Codepoint form of {#glyph_present?}. ASCII and UTF-8 codepoints are
+      # checked directly against Windows-1252 coverage without allocating a
+      # one-character String or raising on missing glyphs.
       #
       # @api private
       # @param code [Integer]
@@ -223,6 +237,10 @@ module Prawn
       # @return [Boolean]
       def glyph_present_ord?(code, encoding = ::Encoding::UTF_8)
         return true if code < 128
+
+        if encoding == ::Encoding::UTF_8
+          return code.between?(0xA0, 0xFF) || WINANSI_EXTRA_CODEPOINTS.key?(code)
+        end
 
         glyph_present?(code.chr(encoding))
       end

@@ -377,14 +377,16 @@ module Prawn
 
       def split_rgb_rgba_data(source, scanlines, color_data, alpha_data)
         position = 0
-        row_width = width
-        scanlines.times do
+        row_bytes = width * 4
+        scanline = 0
+        while scanline < scanlines
           filter = source.getbyte(position)
           position += 1
           color_data << filter
           alpha_data << filter
 
-          row_width.times do
+          row_end = position + row_bytes
+          while position < row_end
             color_data <<
               source.getbyte(position) <<
               source.getbyte(position + 1) <<
@@ -392,6 +394,7 @@ module Prawn
             alpha_data << source.getbyte(position + 3)
             position += 4
           end
+          scanline += 1
         end
       end
 
@@ -406,22 +409,26 @@ module Prawn
         end
 
         source = @img_data
-        scanline_length = width + 1
+        row_width = width
+        scanline_length = row_width + 1
         scanlines = source.bytesize / scanline_length
-        pixels = width * height
+        pixels = row_width * height
 
         alpha_size = pixels + scanlines
         alpha_data = String.new(capacity: alpha_size, encoding: ::Encoding::BINARY)
 
         position = 0
-        scanlines.times do
+        scanline = 0
+        while scanline < scanlines
           alpha_data << source.getbyte(position)
           position += 1
 
-          width.times do
+          row_end = position + row_width
+          while position < row_end
             alpha_data << alpha_palette[source.getbyte(position)]
             position += 1
           end
+          scanline += 1
         end
 
         if alpha_data.bytesize < alpha_size
