@@ -239,35 +239,45 @@ module Prawn
                 sizes&.pop
                 character_spacings&.pop
               when /^<link[^>]*>$/, /^<a[^>]*>$/
-                matches = /href="([^"]*)"/.match(token) ||
-                  /href='([^']*)'/.match(token)
-                link = matches[1] unless matches.nil?
+                if token.include?('href=')
+                  matches = /href="([^"]*)"/.match(token) ||
+                    /href='([^']*)'/.match(token)
+                  link = matches[1] unless matches.nil?
+                end
 
-                matches = /anchor="([^"]*)"/.match(token) ||
-                  /anchor='([^']*)'/.match(token)
-                anchor = matches[1] unless matches.nil?
+                if token.include?('anchor=')
+                  matches = /anchor="([^"]*)"/.match(token) ||
+                    /anchor='([^']*)'/.match(token)
+                  anchor = matches[1] unless matches.nil?
+                end
 
-                matches = /local="([^"]*)"/.match(token) ||
-                  /local='([^']*)'/.match(token)
-                local = matches[1] unless matches.nil?
+                if token.include?('local=')
+                  matches = /local="([^"]*)"/.match(token) ||
+                    /local='([^']*)'/.match(token)
+                  local = matches[1] unless matches.nil?
+                end
               when /^<color[^>]*>$/
-                matches = /rgb="#?([^"]*)"/.match(token) ||
-                  /rgb='#?([^']*)'/.match(token)
-                (colors ||= []) << matches[1] if matches
+                if token.include?('rgb=')
+                  matches = /rgb="#?([^"]*)"/.match(token) ||
+                    /rgb='#?([^']*)'/.match(token)
+                  (colors ||= []) << matches[1] if matches
+                end
 
-                match = /c="#?([^"]*)"/.match(token) ||
-                  /c='#?([^']*)'/.match(token)
-                c = Integer(match[1], 10) unless match.nil?
-                match = /m="#?([^"]*)"/.match(token) ||
-                  /m='#?([^']*)'/.match(token)
-                m = Integer(match[1], 10) unless match.nil?
-                match = /y="#?([^"]*)"/.match(token) ||
-                  /y='#?([^']*)'/.match(token)
-                y = Integer(match[1], 10) unless match.nil?
-                match = /k="#?([^"]*)"/.match(token) ||
-                  /k='#?([^']*)'/.match(token)
-                k = Integer(match[1], 10) unless match.nil?
-                (colors ||= []) << [c, m, y, k] if [c, m, y, k].all?
+                if token.include?('c=')
+                  match = /c="#?([^"]*)"/.match(token) ||
+                    /c='#?([^']*)'/.match(token)
+                  c = Integer(match[1], 10) unless match.nil?
+                  match = /m="#?([^"]*)"/.match(token) ||
+                    /m='#?([^']*)'/.match(token)
+                  m = Integer(match[1], 10) unless match.nil?
+                  match = /y="#?([^"]*)"/.match(token) ||
+                    /y='#?([^']*)'/.match(token)
+                  y = Integer(match[1], 10) unless match.nil?
+                  match = /k="#?([^"]*)"/.match(token) ||
+                    /k='#?([^']*)'/.match(token)
+                  k = Integer(match[1], 10) unless match.nil?
+                  (colors ||= []) << [c, m, y, k] if c && m && y && k
+                end
 
                 # intend to support rgb="#ffffff" or rgb='#ffffff',
                 # r="255" g="255" b="255" or r='255' g='255' b='255',
@@ -277,17 +287,23 @@ module Prawn
                 # color = { :r => 255, :g => 255, :b => 255 }
                 # color = { :c => 100, :m => 100, :y => 100, :k => 100 }
               when /^<font[^>]*>$/
-                matches = /name="([^"]*)"/.match(token) ||
-                  /name='([^']*)'/.match(token)
-                (fonts ||= []) << matches[1] unless matches.nil?
+                if token.include?('name=')
+                  matches = /name="([^"]*)"/.match(token) ||
+                    /name='([^']*)'/.match(token)
+                  (fonts ||= []) << matches[1] unless matches.nil?
+                end
 
-                matches = /size="([^"]*)"/.match(token) ||
-                  /size='([^']*)'/.match(token)
-                (sizes ||= []) << Float(matches[1]) unless matches.nil?
+                if token.include?('size=')
+                  matches = /size="([^"]*)"/.match(token) ||
+                    /size='([^']*)'/.match(token)
+                  (sizes ||= []) << Float(matches[1]) unless matches.nil?
+                end
 
-                matches = /character_spacing="([^"]*)"/.match(token) ||
-                  /character_spacing='([^']*)'/.match(token)
-                (character_spacings ||= []) << Float(matches[1]) unless matches.nil?
+                if token.include?('character_spacing=')
+                  matches = /character_spacing="([^"]*)"/.match(token) ||
+                    /character_spacing='([^']*)'/.match(token)
+                  (character_spacings ||= []) << Float(matches[1]) unless matches.nil?
+                end
               else
                 matched = false
               end

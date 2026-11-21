@@ -6,6 +6,9 @@ module Prawn
     module Dash
       # @group Stable API
 
+      EMPTY_DASH_OPTIONS = {}.freeze
+      private_constant :EMPTY_DASH_OPTIONS
+
       # Get or set stroke dash pattern.
       #
       # @overload dash()
@@ -56,24 +59,36 @@ module Prawn
       #     if the phase is equal to the length of the dash, then stroking will
       #     begin at the beginning of the space.
       #   @return [void]
-      def dash(length = nil, options = {})
+      def dash(length = nil, options = EMPTY_DASH_OPTIONS)
         return current_dash_state if length.nil?
 
-        length = Array(length)
+        if length.is_a?(Numeric)
+          if length.zero?
+            raise ArgumentError,
+              'Zero length dashes are invalid. Call #undash to disable dashes.'
+          elsif length.negative?
+            raise ArgumentError,
+              'Negative numbers are not allowed for dash lengths.'
+          end
+          space = options[:space] || length
+        else
+          length = Array(length)
 
-        if length.all?(&:zero?)
-          raise ArgumentError,
-            'Zero length dashes are invalid. Call #undash to disable dashes.'
-        elsif length.any?(&:negative?)
-          raise ArgumentError,
-            'Negative numbers are not allowed for dash lengths.'
+          if length.all?(&:zero?)
+            raise ArgumentError,
+              'Zero length dashes are invalid. Call #undash to disable dashes.'
+          elsif length.any?(&:negative?)
+            raise ArgumentError,
+              'Negative numbers are not allowed for dash lengths.'
+          end
+
+          length = length.first if length.length == 1
+          space = length.is_a?(Array) ? nil : options[:space] || length
         end
-
-        length = length.first if length.length == 1
 
         self.current_dash_state = {
           dash: length,
-          space: length.is_a?(Array) ? nil : options[:space] || length,
+          space: space,
           phase: options[:phase] || 0,
         }
 

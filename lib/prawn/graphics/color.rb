@@ -6,6 +6,10 @@ module Prawn
     module Color
       # @group Stable API
 
+      # Sentinel distinguishing omitted arguments from explicit `nil`.
+      UNDEFINED_COLOR_ARG = Object.new.freeze
+      private_constant :UNDEFINED_COLOR_ARG
+
       # Sets or returns the fill color.
       #
       # @overload fill_color
@@ -32,12 +36,27 @@ module Prawn
       #
       #   @param color [String, Array<Number>]
       #   @return [void]
-      def fill_color(*color)
-        return current_fill_color if color.empty?
+      # rubocop: disable Metrics/ParameterLists
+      def fill_color(
+        color_or_c = UNDEFINED_COLOR_ARG,
+        magenta = UNDEFINED_COLOR_ARG,
+        yellow = UNDEFINED_COLOR_ARG,
+        black = UNDEFINED_COLOR_ARG
+      )
+        return current_fill_color if color_or_c.equal?(UNDEFINED_COLOR_ARG)
 
-        self.current_fill_color = color.size == 1 ? color[0] : process_color(*color)
+        color =
+          if magenta.equal?(UNDEFINED_COLOR_ARG)
+            color_or_c
+          elsif !black.equal?(UNDEFINED_COLOR_ARG)
+            [color_or_c, magenta, yellow, black]
+          else
+            raise ArgumentError, 'wrong number of arguments supplied'
+          end
+        self.current_fill_color = color
         set_fill_color
       end
+      # rubocop: enable Metrics/ParameterLists
 
       alias fill_color= fill_color
 
@@ -64,13 +83,27 @@ module Prawn
       #       pdf.stroke_color 0, 99, 95, 0
       #       ```
       #   @return [void]
-      def stroke_color(*color)
-        return current_stroke_color if color.empty?
+      # rubocop: disable Metrics/ParameterLists
+      def stroke_color(
+        color_or_c = UNDEFINED_COLOR_ARG,
+        magenta = UNDEFINED_COLOR_ARG,
+        yellow = UNDEFINED_COLOR_ARG,
+        black = UNDEFINED_COLOR_ARG
+      )
+        return current_stroke_color if color_or_c.equal?(UNDEFINED_COLOR_ARG)
 
-        color = color.size == 1 ? color[0] : process_color(*color)
+        color =
+          if magenta.equal?(UNDEFINED_COLOR_ARG)
+            color_or_c
+          elsif !black.equal?(UNDEFINED_COLOR_ARG)
+            [color_or_c, magenta, yellow, black]
+          else
+            raise ArgumentError, 'wrong number of arguments supplied'
+          end
         self.current_stroke_color = color
         set_stroke_color(color)
       end
+      # rubocop: enable Metrics/ParameterLists
 
       alias stroke_color= stroke_color
 

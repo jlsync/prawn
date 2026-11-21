@@ -7,6 +7,10 @@ module Prawn
       #
       # @private
       class LineWrap
+        # Reusable single-space token for the ASCII/UTF-8 byte-scanning path.
+        ASCII_SPACE = ' '
+        private_constant :ASCII_SPACE
+
         # Patterns and characters below depend only on the text encoding, so
         # they are cached per class rather than per instance: a new LineWrap
         # is created for every text box.
@@ -115,6 +119,15 @@ module Prawn
           if fragment.ascii_only?
             result = try_fast_path_ascii_fragment(fragment)
             return result unless result.nil?
+
+            return add_ascii_compatible_fragment?(fragment)
+          end
+
+          encoding = fragment.encoding
+          if encoding == ::Encoding::UTF_8 && fragment.valid_encoding? &&
+              !fragment.include?(Prawn::Text::SHY) &&
+              !fragment.include?(Prawn::Text::ZWSP)
+            return add_ascii_compatible_fragment?(fragment)
           end
 
           @fragment_output = +''
@@ -122,7 +135,6 @@ module Prawn
           # Every segment yielded by the scan shares the fragment's encoding,
           # so the pattern and the single-character sentinels are resolved
           # once per fragment rather than once per token.
-          encoding = fragment.encoding
           pattern = scan_pattern(encoding)
           zero_width_space = zero_width_space_cached(encoding)
           soft_hyphen = soft_hyphen_cached(encoding)
@@ -189,6 +201,82 @@ module Prawn
           nil
         end
 
+        # Tokenizes ASCII-only fragments and valid UTF-8 fragments without
+        # soft hyphens or zero-width spaces using direct byte scanning instead
+        # of Onigmo regex matching. Matches {#scan_pattern} token-for-token
+        # while avoiding MatchData and per-space String allocations.
+        def add_ascii_compatible_fragment?(fragment)
+          @fragment_output = +''
+          doc = @document
+          kopts = kerning_options
+          len = fragment.bytesize
+          i = 0
+
+          while i < len
+            first_byte = fragment.getbyte(i)
+            token_end = next_ascii_token_end(fragment, i, first_byte, len)
+            segment =
+              if first_byte == 32 && token_end - i == 1
+                ASCII_SPACE
+              else
+                fragment.byteslice(i, token_end - i)
+              end
+            i = token_end
+
+            segment_width = doc.width_of(segment, kopts)
+            if @accumulated_width + segment_width <= @width
+              @accumulated_width += segment_width
+              @fragment_output << segment
+            else
+              if @accumulated_width.zero? && @line_contains_more_than_one_word
+                @line_contains_more_than_one_word = false
+              end
+              end_of_the_line_reached(segment)
+              fragment_finished(fragment)
+              return false
+            end
+          end
+
+          fragment_finished(fragment)
+          true
+        end
+
+        def next_ascii_token_end(fragment, start, first_byte, len)
+          i = start + 1
+          case first_byte
+          when 32, 9
+            while i < len
+              case fragment.getbyte(i)
+              when 32, 9
+                i += 1
+              else
+                break
+              end
+            end
+          when 45
+            i += 1 while i < len && fragment.getbyte(i) == 45
+            while i < len
+              case fragment.getbyte(i)
+              when 32, 9, 45
+                break
+              else
+                i += 1
+              end
+            end
+          else
+            while i < len
+              case fragment.getbyte(i)
+              when 32, 9, 45
+                break
+              else
+                i += 1
+              end
+            end
+            i += 1 while i < len && fragment.getbyte(i) == 45
+          end
+          i
+        end
+
         # The pattern used to determine chunks of text to place on a given line
         #
         def scan_pattern(encoding = ::Encoding::UTF_8)
@@ -245,12 +333,9 @@ module Prawn
         end
 
         def soft_hyphen_cached(encoding)
-          # Called per token: memoize per instance in front of the shared cache.
-          return @soft_hyphen_char if @soft_hyphen_encoding.equal?(encoding)
+          return Prawn::Text::SHY if encoding == ::Encoding::UTF_8
 
-          @soft_hyphen_encoding = encoding
-          @soft_hyphen_char =
-            encoding_cached(:soft_hyphen, encoding) { soft_hyphen(encoding)&.freeze }
+          encoding_cached(:soft_hyphen, encoding) { soft_hyphen(encoding)&.freeze }
         end
 
         def break_chars(encoding = ::Encoding::UTF_8)
@@ -271,12 +356,9 @@ module Prawn
         end
 
         def zero_width_space_cached(encoding)
-          # Called per token: memoize per instance in front of the shared cache.
-          return @zws_char if @zws_encoding.equal?(encoding)
+          return Prawn::Text::ZWSP if encoding == ::Encoding::UTF_8
 
-          @zws_encoding = encoding
-          @zws_char =
-            encoding_cached(:zero_width_space, encoding) { zero_width_space(encoding)&.freeze }
+          encoding_cached(:zero_width_space, encoding) { zero_width_space(encoding)&.freeze }
         end
 
         def whitespace(encoding = ::Encoding::UTF_8)
@@ -473,7 +555,7 @@ module Prawn
 
         def append_char(char)
           # kerning doesn't make sense in the context of a single character
-          char_width = char_width_cached(char)
+          char_width = @document.width_of(char)
 
           if @accumulated_width + char_width <= @width
             @accumulated_width += char_width
@@ -482,19 +564,6 @@ module Prawn
           else
             false
           end
-        end
-
-        def char_width_cached(char)
-          font_id = @document.font.object_id
-          by_size = ((@char_width_cache ||= {})[font_id] ||= {})
-          cache = (by_size[@document.font_size] ||= {})
-          if (w = cache[char])
-            return w
-          end
-
-          w = @document.width_of(char)
-          cache[char] = w
-          w
         end
       end
     end

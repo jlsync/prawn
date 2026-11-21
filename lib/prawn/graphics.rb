@@ -89,7 +89,7 @@ module Prawn
     # @param options [Hash]
     # @option options :bounds [Array(Array(Number, Number), Array(Number, Number))]
     # @return [void]
-    def curve_to(dest, options = {})
+    def curve_to(dest, options = EMPTY_OPTIONS)
       bounds = options[:bounds] || raise(
         Prawn::Errors::InvalidGraphicsPath,
         'Bounding points for bezier curve must be specified as :bounds => [[x1,y1],[x2,y2]]',
@@ -98,13 +98,28 @@ module Prawn
       if bounds.length == 2
         b0, b1 = bounds
         bounds << dest
-        x1, y1 = map_to_absolute(b0)
-        x2, y2 = map_to_absolute(b1)
-        x3, y3 = map_to_absolute(dest)
-        renderer.add_content(
-          "#{real_param(x1)} #{real_param(y1)} #{real_param(x2)} " \
-            "#{real_param(y2)} #{real_param(x3)} #{real_param(y3)} c",
-        )
+        if b0.instance_of?(Array) && b0.length == 2 &&
+            b1.instance_of?(Array) && b1.length == 2 &&
+            dest.instance_of?(Array) && dest.length == 2 &&
+            !b0[0].respond_to?(:to_ary, true) &&
+            !b0[1].respond_to?(:to_ary, true) &&
+            !b1[0].respond_to?(:to_ary, true) &&
+            !b1[1].respond_to?(:to_ary, true) &&
+            !dest[0].respond_to?(:to_ary, true) &&
+            !dest[1].respond_to?(:to_ary, true)
+          add_curve_content(b0[0], b0[1], b1[0], b1[1], dest[0], dest[1])
+        else
+          x1, y1 = map_to_absolute(b0)
+          x2, y2 = map_to_absolute(b1)
+          x3, y3 = map_to_absolute(dest)
+          p1 = real_param(x1)
+          p2 = real_param(y1)
+          p3 = real_param(x2)
+          p4 = real_param(y2)
+          p5 = real_param(x3)
+          p6 = real_param(y3)
+          renderer.add_content("#{p1} #{p2} #{p3} #{p4} #{p5} #{p6} c")
+        end
       else
         curve_points = real_params(
           (bounds << dest).flat_map { |e| map_to_absolute(e) },
@@ -328,28 +343,16 @@ module Prawn
       move_to(x + radius1, y)
 
       # Upper right hand corner
-      curve_to(
-        [x, y + radius2],
-        bounds: [[x + radius1, y + l2], [x + l1, y + radius2]],
-      )
+      add_curve_content(x + radius1, y + l2, x + l1, y + radius2, x, y + radius2)
 
       # Upper left hand corner
-      curve_to(
-        [x - radius1, y],
-        bounds: [[x - l1, y + radius2], [x - radius1, y + l2]],
-      )
+      add_curve_content(x - l1, y + radius2, x - radius1, y + l2, x - radius1, y)
 
       # Lower left hand corner
-      curve_to(
-        [x, y - radius2],
-        bounds: [[x - radius1, y - l2], [x - l1, y - radius2]],
-      )
+      add_curve_content(x - radius1, y - l2, x - l1, y - radius2, x, y - radius2)
 
       # Lower right hand corner
-      curve_to(
-        [x + radius1, y],
-        bounds: [[x + l1, y - radius2], [x + radius1, y - l2]],
-      )
+      add_curve_content(x + l1, y - radius2, x + radius1, y - l2, x + radius1, y)
 
       move_to(x, y)
     end
@@ -403,20 +406,53 @@ module Prawn
     # @param points [Array(Array(Number, Number), Array(Number, Number), Array(Number, Number))]
     # @return [void]
     def rounded_vertex(radius, *points)
-      radial_point1 = point_on_line(radius, points[0], points[1])
-      bezier_point1 = point_on_line(
-        radius - (radius * KAPPA),
-        points[0],
-        points[1],
-      )
-      radial_point2 = point_on_line(radius, points[2], points[1])
-      bezier_point2 = point_on_line(
-        radius - (radius * KAPPA),
-        points[2],
-        points[1],
-      )
-      line_to(radial_point1)
-      curve_to(radial_point2, bounds: [bezier_point1, bezier_point2])
+      if points.length == 3 &&
+          points[0].instance_of?(Array) && points[0].length == 2 &&
+          points[1].instance_of?(Array) && points[1].length == 2 &&
+          points[2].instance_of?(Array) && points[2].length == 2
+        x0, y0 = points[0]
+        x1, y1 = points[1]
+        x2, y2 = points[2]
+        bezier_distance = radius - (radius * KAPPA)
+
+        dx1 = x1 - x0
+        dy1 = y1 - y0
+        len1 = Math.sqrt((dx1 * dx1) + (dy1 * dy1))
+        t_rad1 = (len1 - radius) / len1
+        t_bez1 = (len1 - bezier_distance) / len1
+        rx1 = x0 + (t_rad1 * dx1)
+        ry1 = y0 + (t_rad1 * dy1)
+        bx1 = x0 + (t_bez1 * dx1)
+        by1 = y0 + (t_bez1 * dy1)
+
+        dx2 = x1 - x2
+        dy2 = y1 - y2
+        len2 = Math.sqrt((dx2 * dx2) + (dy2 * dy2))
+        t_rad2 = (len2 - radius) / len2
+        t_bez2 = (len2 - bezier_distance) / len2
+        rx2 = x2 + (t_rad2 * dx2)
+        ry2 = y2 + (t_rad2 * dy2)
+        bx2 = x2 + (t_bez2 * dx2)
+        by2 = y2 + (t_bez2 * dy2)
+
+        line_to(rx1, ry1)
+        add_curve_content(bx1, by1, bx2, by2, rx2, ry2)
+      else
+        radial_point1 = point_on_line(radius, points[0], points[1])
+        bezier_point1 = point_on_line(
+          radius - (radius * KAPPA),
+          points[0],
+          points[1],
+        )
+        radial_point2 = point_on_line(radius, points[2], points[1])
+        bezier_point2 = point_on_line(
+          radius - (radius * KAPPA),
+          points[2],
+          points[1],
+        )
+        line_to(radial_point1)
+        curve_to(radial_point2, bounds: [bezier_point1, bezier_point2])
+      end
     end
 
     # Strokes the current path. If a block is provided, yields to the block
@@ -798,6 +834,20 @@ module Prawn
 
     private
 
+    # rubocop: disable Metrics/ParameterLists
+    def add_curve_content(x1, y1, x2, y2, dest_x, dest_y)
+      left = @bounding_box.absolute_left
+      bottom = @bounding_box.absolute_bottom
+      p1 = real_param(left + x1)
+      p2 = real_param(bottom + y1)
+      p3 = real_param(left + x2)
+      p4 = real_param(bottom + y2)
+      p5 = real_param(left + dest_x)
+      p6 = real_param(bottom + dest_y)
+      renderer.add_content("#{p1} #{p2} #{p3} #{p4} #{p5} #{p6} c")
+    end
+    # rubocop: enable Metrics/ParameterLists
+
     def point_command(operator, x_or_point, y = nil)
       if !y.nil? && !x_or_point.respond_to?(:to_ary, true) &&
           !y.respond_to?(:to_ary, true)
@@ -833,7 +883,7 @@ module Prawn
         converted = int_cache[num]
         return converted if converted
 
-        converted = "#{num}.0".freeze
+        converted = (num.to_s << '.0').freeze
         int_cache[num] = converted if int_cache.size < REAL_PARAM_CACHE_SIZE
         return converted
       end
@@ -880,10 +930,17 @@ module Prawn
       renderer.add_content(cmd)
     end
 
-    def map_to_absolute(*point)
-      # Avoid Array#flatten for the common `([x, y])` and `(x, y)` forms.
-      x, y = point.length == 1 ? point[0] : point
-      x, y = point.flatten if x.respond_to?(:to_ary) || y.respond_to?(:to_ary)
+    def map_to_absolute(x_or_point, y = nil)
+      # Avoid splat Array and Array#flatten for the common `([x, y])` and `(x, y)` forms.
+      if !y.nil? && !x_or_point.respond_to?(:to_ary) && !y.respond_to?(:to_ary)
+        x = x_or_point
+      elsif y.nil? && x_or_point.instance_of?(Array) &&
+          x_or_point.length == 2 && !x_or_point[0].respond_to?(:to_ary) &&
+          !x_or_point[1].respond_to?(:to_ary)
+        x, y = x_or_point
+      else
+        x, y = (y.nil? ? [x_or_point] : [x_or_point, y]).flatten
+      end
       [@bounding_box.absolute_left + x, @bounding_box.absolute_bottom + y]
     end
 

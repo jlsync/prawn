@@ -31,6 +31,16 @@ module Prawn
           end
         end
 
+        # Precomputed style option hashes to avoid allocating `{ style: ... }`
+        # per styled fragment.
+        STYLE_OPTIONS = {
+          normal: { style: :normal }.freeze,
+          bold: { style: :bold }.freeze,
+          italic: { style: :italic }.freeze,
+          bold_italic: { style: :bold_italic }.freeze,
+        }.freeze
+        private_constant :STYLE_OPTIONS
+
         attr_reader :max_line_height
         attr_reader :max_descender
         attr_reader :max_ascender
@@ -151,12 +161,17 @@ module Prawn
           array.each do |hash|
             text = hash[:text]
             if text.instance_of?(String) && text.encoding.ascii_compatible? &&
-                text.ascii_only? && !text.include?("\n")
-              # Wrapping mutates these strings, so retain scan's copy semantics.
-              unless text.empty?
+                text.valid_encoding?
+              next if text.empty?
+
+              nl = text.byteindex("\n")
+              if nl.nil?
+                # Wrapping mutates these strings, so retain scan's copy semantics.
                 copy = hash.dup
                 copy[:text] = text.dup
                 @unconsumed << copy
+              else
+                split_newlines_into_unconsumed(hash, text, nl)
               end
             else
               text.scan(/[^\n]+|\n/) do |line|
@@ -224,11 +239,16 @@ module Prawn
         # @yield
         # @return [void]
         def apply_color_and_font_settings(fragment, &block)
-          if fragment.color
+          if (color = fragment.color)
             original_fill_color = @document.fill_color
             original_stroke_color = @document.stroke_color
-            @document.fill_color(*fragment.color)
-            @document.stroke_color(*fragment.color)
+            if color.is_a?(Array)
+              @document.fill_color(*color)
+              @document.stroke_color(*color)
+            else
+              @document.fill_color(color)
+              @document.stroke_color(color)
+            end
             apply_font_settings(fragment, &block)
             @document.stroke_color = original_stroke_color
             @document.fill_color = original_fill_color
@@ -281,7 +301,8 @@ module Prawn
             raise BadFontFamily unless current_font.family
 
             @document.font(
-              font || current_font.family, style: font_style,
+              font || current_font.family,
+              STYLE_OPTIONS[font_style] || { style: font_style },
             ) do
               apply_font_size(size, styles, &block)
             end
@@ -365,6 +386,33 @@ module Prawn
         end
 
         private
+
+        def split_newlines_into_unconsumed(hash, text, newline_pos)
+          len = text.bytesize
+          pos = 0
+          nl = newline_pos
+
+          while pos < len
+            copy = hash.dup
+            if nl.nil?
+              copy[:text] = text.byteslice(pos, len - pos)
+              @unconsumed << copy
+              break
+            elsif nl == pos
+              copy[:text] = text.byteslice(nl, 1)
+              @unconsumed << copy
+              pos += 1
+            else
+              copy[:text] = text.byteslice(pos, nl - pos)
+              @unconsumed << copy
+              nl_copy = hash.dup
+              nl_copy[:text] = text.byteslice(nl, 1)
+              @unconsumed << nl_copy
+              pos = nl + 1
+            end
+            nl = pos < len ? text.byteindex("\n", pos) : nil
+          end
+        end
 
         def load_previous_format_state
           @current_format_state = nil

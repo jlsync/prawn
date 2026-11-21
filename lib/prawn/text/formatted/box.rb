@@ -191,7 +191,13 @@ module Prawn
         #   `:shrink_to_fit` (that is the font size will not be reduced to less
         #   than this value, even if it means that some text will be cut off).
         EMPTY_FLAGS = {}.freeze
-        private_constant :EMPTY_FLAGS
+        STYLE_OPTIONS = {
+          normal: EMPTY_FLAGS,
+          bold: { style: :bold }.freeze,
+          italic: { style: :italic }.freeze,
+          bold_italic: { style: :bold_italic }.freeze,
+        }.freeze
+        private_constant :EMPTY_FLAGS, :STYLE_OPTIONS
 
         def initialize(formatted_text, options = EMPTY_FLAGS)
           @inked = false
@@ -483,11 +489,15 @@ module Prawn
           document_font = @document.font
           original_font = document_font.family
           cached_font = cached_style = cached_primary = nil
+          fallback_candidates_by_style = nil
 
           formatted_text.each do |hash|
+            text = hash[:text]
+            next if text.empty?
+
             fragment_font = hash[:font] || original_font
             fragment_font_style = font_style(hash[:styles])
-            fragment_font_options = fragment_font_style == :normal ? EMPTY_FLAGS : { style: fragment_font_style }
+            fragment_font_options = STYLE_OPTIONS[fragment_font_style] || { style: fragment_font_style }
 
             primary_font =
               if fragment_font == cached_font && fragment_font_style == cached_style
@@ -502,30 +512,42 @@ module Prawn
             cached_style = fragment_font_style
             cached_primary = primary_font
 
-            modified_formatted_text.concat(
-              analyze_glyphs_for_fallback_font_support(
-                hash, original_font, fragment_font, fragment_font_options, primary_font,
-              ),
+            if all_glyphs_present?(text, primary_font)
+              modified_formatted_text << hash
+              next
+            end
+
+            fallback_candidates = ((fallback_candidates_by_style ||= {})[fragment_font_style] ||= [])
+            fragments = analyze_glyphs_for_fallback_font_support(
+              hash, original_font, fragment_font_options, primary_font, fallback_candidates,
             )
+            modified_formatted_text.concat(fragments)
           end
 
           modified_formatted_text
         end
 
-        def analyze_glyphs_for_fallback_font_support(
-          hash, original_font, fragment_font, fragment_font_options, primary_font
-        )
-          # [name, font object] pairs for the declared fallbacks, resolved
-          # lazily as the search reaches them. nil until the first missing
-          # glyph, since most text stays in the primary font.
-          fallback_candidates = nil
+        def all_glyphs_present?(text, primary_font)
+          text_encoding = text.encoding
+          return false unless (text_encoding == ::Encoding::UTF_8 && text.valid_encoding?) || text.ascii_only?
 
+          text.each_codepoint do |code|
+            return false unless primary_font.glyph_present_ord?(code, text_encoding)
+          end
+          true
+        end
+
+        def analyze_glyphs_for_fallback_font_support(
+          hash, original_font, fragment_font_options, primary_font, fallback_candidates
+        )
           fragments = []
           fragment = nil
           current_font = nil
           no_explicit_font = hash[:font].nil?
+          fragment_font = hash[:font] || original_font
           text = hash[:text]
           text_encoding = text.encoding
+          is_utf8 = text_encoding == ::Encoding::UTF_8
 
           # Iterating codepoints rather than characters avoids allocating a
           # one-character String for every glyph. It is only safe when the
@@ -533,11 +555,10 @@ module Prawn
           # example) contain byte sequences that each_char yields as characters
           # but each_codepoint rejects as invalid. Fall back to character
           # iteration for those, which also preserves invalid UTF-8 text.
-          if (text_encoding == ::Encoding::UTF_8 && text.valid_encoding?) || text.ascii_only?
+          if (is_utf8 && text.valid_encoding?) || text.ascii_only?
             text.each_codepoint do |code|
               font = fragment_font
               unless primary_font.glyph_present_ord?(code, text_encoding)
-                fallback_candidates ||= []
                 font = fallback_font_for_glyph(
                   code,
                   text_encoding,
@@ -553,7 +574,9 @@ module Prawn
               if font != current_font || fragments.empty?
                 current_font = font
                 fragment = hash.dup
-                fragment[:text] = String.new(encoding: text_encoding) << code
+                str = is_utf8 ? +'' : (+'').force_encoding(text_encoding)
+                str << code
+                fragment[:text] = str
                 fragment[:font] = font unless font.nil?
                 fragments << fragment
               else
@@ -566,7 +589,6 @@ module Prawn
             text.each_char do |char|
               font = fragment_font
               unless primary_font.glyph_present?(char)
-                fallback_candidates ||= []
                 font = fallback_font_for_char(
                   char,
                   fallback_candidates,

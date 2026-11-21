@@ -55,9 +55,12 @@ class Arcfour
     # encrypted string, and #key_byte would be a method call per byte.
     string.each_byte do |byte|
       i = (i + 1) & 0xff
-      j = (j + sbox[i]) & 0xff
-      sbox[i], sbox[j] = sbox[j], sbox[i]
-      out << (byte ^ sbox[(sbox[i] + sbox[j]) & 0xff])
+      si = sbox[i]
+      j = (j + si) & 0xff
+      sj = sbox[j]
+      sbox[i] = sj
+      sbox[j] = si
+      out << (byte ^ sbox[(si + sj) & 0xff])
     end
 
     @i = i
