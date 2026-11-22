@@ -48,7 +48,7 @@ Gem::Specification.new do |spec|
   }
 
   spec.add_dependency('matrix', '~> 0.4')
-  spec.add_dependency('pdf-core', '~> 0.10.0')
+  spec.add_dependency('pdf-core', '~> 0.11')
   spec.add_dependency('ttfunk', '~> 1.8')
 
   spec.add_development_dependency('pdf-inspector', '~> 1.3')
